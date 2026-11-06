@@ -1,4 +1,25 @@
-import type { Cell, Config, Frame, HSP, Result } from "./types.ts";
+import type { Cell, Config, Frame, HSP, Layer, Result } from "./types.ts";
+
+export function fractionalFreeVolume(layer: Layer, temperature: number) {
+  return (
+    layer.freeVolume25 +
+    layer.alphaGlassy *
+      (Math.min(temperature, layer.tg) - Math.min(25, layer.tg)) +
+    layer.alphaRubbery *
+      (Math.max(temperature, layer.tg) - Math.max(25, layer.tg))
+  );
+}
+/** Doolittle-style scenario model, referenced to f=0.10 at 25°C, fully amorphous. */
+export function layerTransport(layer: Layer, config: Config) {
+  const freeVolume = fractionalFreeVolume(layer, config.temperature);
+  const morphologyFactor = (1 - layer.crystallinity) ** config.tortuosity;
+  const factor = Math.exp(-config.freeVolumeB * (1 / freeVolume - 1 / 0.1));
+  const diffusion =
+    config.transportModel === "freeVolume"
+      ? 10 ** layer.logD * factor * morphologyFactor
+      : diffusionAtTemperature(layer.logD, layer.ea, config.temperature);
+  return { freeVolume, morphologyFactor, factor, diffusion };
+}
 
 export function hansenDistance(a: HSP, b: HSP): number {
   return Math.sqrt(4 * (a.d - b.d) ** 2 + (a.p - b.p) ** 2 + (a.h - b.h) ** 2);
@@ -57,6 +78,23 @@ export function validateConfig(c: Config): string[] {
     check(l.radius, 0.5, 30, `Layer ${i + 1} HSP radius`);
     check(l.logD, -20, -10, `Layer ${i + 1} log₁₀ D`);
     check(l.ea, 0, 150, `Layer ${i + 1} activation energy`);
+    check(
+      l.freeVolume25,
+      0.01,
+      0.4,
+      `Layer ${i + 1} fractional free volume at 25°C`,
+    );
+    check(l.tg, -150, 200, `Layer ${i + 1} Tg (°C)`);
+    check(l.alphaGlassy, 0, 0.002, `Layer ${i + 1} glassy expansion (K⁻¹)`);
+    check(l.alphaRubbery, 0, 0.002, `Layer ${i + 1} rubbery expansion (K⁻¹)`);
+    check(l.crystallinity, 0, 0.95, `Layer ${i + 1} crystalline fraction`);
+    if (c.transportModel === "freeVolume")
+      check(
+        fractionalFreeVolume(l, c.temperature),
+        0.005,
+        0.5,
+        `Layer ${i + 1} free volume at selected temperature`,
+      );
     for (const key of ["d", "p", "h"] as const)
       check(l.hsp?.[key], 0, 40, `Layer ${i + 1} HSP ${key}`);
   });
@@ -68,7 +106,32 @@ export function validateConfig(c: Config): string[] {
     errors.push("Invalid surfactant name.");
   for (const key of ["d", "p", "h"] as const)
     check(c.surfactant?.hsp?.[key], 0, 40, `Surfactant HSP ${key}`);
+  for (const key of [
+    "id",
+    "commonName",
+    "source",
+    "formula",
+    "assumptions",
+  ] as const) {
+    const value = c.surfactant?.[key];
+    if (
+      value !== undefined &&
+      (typeof value !== "string" || value.length > 2048)
+    )
+      errors.push(`Invalid surfactant ${key}.`);
+  }
+  if (c.surfactant?.molarVolume !== undefined)
+    check(
+      c.surfactant.molarVolume,
+      1,
+      10000,
+      "Surfactant molar volume (cm³/mol)",
+    );
   check(c.beta, 0, 5, "HSP sensitivity β");
+  if (!["arrhenius", "freeVolume"].includes(c.transportModel))
+    errors.push("Choose a transport model.");
+  check(c.freeVolumeB, 0, 1, "Free-volume coefficient B");
+  check(c.tortuosity, 0, 4, "Morphology exponent τ");
   check(c.temperature, 0, 80, "Temperature (°C)");
   check(c.hours, 0.1, 720, "Duration (h)");
   check(c.surfaceCapacity, 0.01, 100, "Surface capacity (mg/m²)");
@@ -138,11 +201,7 @@ export function simulate(
       layer.radius,
       c.beta,
     ).affinity;
-    const diffusion = diffusionAtTemperature(
-      layer.logD,
-      layer.ea,
-      c.temperature,
-    );
+    const diffusion = layerTransport(layer, c).diffusion;
     for (let i = 0; i < count; i++) {
       cells.push({
         x: x + width / 2,

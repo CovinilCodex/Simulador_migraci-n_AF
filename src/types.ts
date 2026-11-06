@@ -1,4 +1,14 @@
 export type HSP = { d: number; p: number; h: number };
+export type Surfactant = {
+  name: string;
+  hsp: HSP;
+  id?: string;
+  commonName?: string;
+  source?: string;
+  formula?: string;
+  molarVolume?: number;
+  assumptions?: string;
+};
 export type Layer = {
   id: string;
   polymer: string;
@@ -10,11 +20,19 @@ export type Layer = {
   radius: number;
   logD: number;
   ea: number;
+  freeVolume25: number;
+  tg: number;
+  alphaGlassy: number;
+  alphaRubbery: number;
+  crystallinity: number;
 };
 export type Boundary = "dry" | "wash" | "sealed" | "sink";
 export type Config = {
   layers: Layer[];
-  surfactant: { name: string; hsp: HSP };
+  surfactant: Surfactant;
+  transportModel: "arrhenius" | "freeVolume";
+  freeVolumeB: number;
+  tortuosity: number;
   beta: number;
   temperature: number;
   hours: number;

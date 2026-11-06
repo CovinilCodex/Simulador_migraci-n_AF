@@ -1,0 +1,268 @@
+[
+  {
+    "id": "hvk-1",
+    "name": "Glyceryl monolaurate",
+    "commonName": "GML / monolaurin",
+    "hsp": {
+      "d": 16.87059695958472,
+      "p": 3.189805890100573,
+      "h": 13.201049384698504
+    },
+    "molarVolume": 269.70000000000005,
+    "formula": "C15H30O4",
+    "assumptions": "Pure primary (1-)monoester; two remaining OH on adjacent carbons. Commercial mono-/diglyceride mixtures are not this molecule.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-2",
+    "name": "Glyceryl monopalmitate",
+    "commonName": "GMP / monopalmitin",
+    "hsp": {
+      "d": 16.851242143070937,
+      "p": 2.5749495616884905,
+      "h": 11.860710104306136
+    },
+    "molarVolume": 334.1,
+    "formula": "C19H38O4",
+    "assumptions": "Pure primary (1-)monoester; two remaining OH on adjacent carbons. Commercial mono-/diglyceride mixtures are not this molecule.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-3",
+    "name": "Glyceryl monostearate",
+    "commonName": "GMS / monostearin",
+    "hsp": {
+      "d": 16.844116844116844,
+      "p": 2.3485958191649594,
+      "h": 11.32740607156503
+    },
+    "molarVolume": 366.3,
+    "formula": "C21H42O4",
+    "assumptions": "Pure primary (1-)monoester; two remaining OH on adjacent carbons. Commercial mono-/diglyceride mixtures are not this molecule.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-4",
+    "name": "Glyceryl monooleate",
+    "commonName": "GMO / monoolein",
+    "hsp": {
+      "d": 16.698975353087786,
+      "p": 2.382416639601564,
+      "h": 11.40867437570204
+    },
+    "molarVolume": 361.1,
+    "formula": "C21H40O4",
+    "assumptions": "Pure primary monoester of cis-oleic acid; not a mixed oleate grade.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-5",
+    "name": "Propylene glycol monostearate",
+    "commonName": "PGMS",
+    "hsp": {
+      "d": 16.616807179766113,
+      "p": 1.903920111306732,
+      "h": 8.569097161465294
+    },
+    "molarVolume": 367.70000000000005,
+    "formula": "C21H42O3",
+    "assumptions": "Primary monoester, one free OH; commercial isomers/diesters not included.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-6",
+    "name": "Diglyceryl monostearate",
+    "commonName": "Polyglyceryl-2 stearate family",
+    "hsp": {
+      "d": 17.26233892535862,
+      "p": 2.607408591546863,
+      "h": 13.045768429340848
+    },
+    "molarVolume": 411.3,
+    "formula": "C24H48O6",
+    "assumptions": "One linear primary monoester of alpha,alpha-prime diglycerol; two adjacent OH and one isolated OH. Grade oligomer/isomer distribution must be supplied.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-7",
+    "name": "Sorbitan monolaurate",
+    "commonName": "Span 20-type family",
+    "hsp": {
+      "d": 17.84148397976391,
+      "p": 3.6169549871946876,
+      "h": 15.365145287738807
+    },
+    "molarVolume": 296.5,
+    "formula": "C18H34O6",
+    "assumptions": "Ideal 1,4-sorbitan 6-monoester: one ring ether; free OH at C2/C3/C5. Commercial sorbitan esters contain isomers and other esterification levels.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-8",
+    "name": "Sorbitan monopalmitate",
+    "commonName": "Span 40-type family",
+    "hsp": {
+      "d": 17.650318647824882,
+      "p": 2.971535477149417,
+      "h": 13.926935972441791
+    },
+    "molarVolume": 360.90000000000003,
+    "formula": "C22H42O6",
+    "assumptions": "Ideal 1,4-sorbitan 6-monoester: one ring ether; free OH at C2/C3/C5. Commercial sorbitan esters contain isomers and other esterification levels.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-9",
+    "name": "Sorbitan monostearate",
+    "commonName": "Span 60-type family",
+    "hsp": {
+      "d": 17.57822437038921,
+      "p": 2.728128093877448,
+      "h": 13.344352268708336
+    },
+    "molarVolume": 393.1,
+    "formula": "C24H46O6",
+    "assumptions": "Ideal 1,4-sorbitan 6-monoester: one ring ether; free OH at C2/C3/C5. Commercial sorbitan esters contain isomers and other esterification levels.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-10",
+    "name": "Sorbitan monooleate",
+    "commonName": "Span 80-type family",
+    "hsp": {
+      "d": 17.45295179169889,
+      "p": 2.7647000611065344,
+      "h": 13.433498470425969
+    },
+    "molarVolume": 387.90000000000003,
+    "formula": "C24H44O6",
+    "assumptions": "Ideal 1,4-sorbitan 6-monoester: one ring ether; free OH at C2/C3/C5. Commercial sorbitan esters contain isomers and other esterification levels.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-11",
+    "name": "PEG-2 monostearate",
+    "commonName": "PEG-2 stearate family",
+    "hsp": {
+      "d": 16.83449522334108,
+      "p": 2.0818171696670533,
+      "h": 8.8010984456333
+    },
+    "molarVolume": 387.3,
+    "formula": "C22H44O4",
+    "assumptions": "Pure monoester with exactly 2 oxyethylene units; one free terminal OH. Commercial PEG distributions and diesters excluded.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-12",
+    "name": "PEG-8 monostearate",
+    "commonName": "PEG-8 stearate family",
+    "hsp": {
+      "d": 17.17221945963865,
+      "p": 2.103260664600358,
+      "h": 8.919776161025823
+    },
+    "molarVolume": 603.3000000000001,
+    "formula": "C34H68O10",
+    "assumptions": "Pure monoester with exactly 8 oxyethylene units; one free terminal OH. Commercial PEG distributions and diesters excluded.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-13",
+    "name": "Laureth-2",
+    "commonName": "Laureth-2 family",
+    "hsp": {
+      "d": 16.67805878332194,
+      "p": 2.580257838438397,
+      "h": 9.426479189556485
+    },
+    "molarVolume": 292.6,
+    "formula": "C16H34O3",
+    "assumptions": "Linear pure C12 alcohol ethoxylate with exactly 2 EO units; one terminal OH, not a commercial homolog distribution.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-14",
+    "name": "Laureth-4",
+    "commonName": "Laureth-4 family",
+    "hsp": {
+      "d": 16.89522764673615,
+      "p": 2.587487968199836,
+      "h": 9.36842656728873
+    },
+    "molarVolume": 364.6,
+    "formula": "C20H42O5",
+    "assumptions": "Linear pure C12 alcohol ethoxylate with exactly 4 EO units; one terminal OH, not a commercial homolog distribution.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-15",
+    "name": "Laureth-7",
+    "commonName": "Laureth-7 family",
+    "hsp": {
+      "d": 17.096910706728732,
+      "p": 2.4766610052305595,
+      "h": 9.314189503702186
+    },
+    "molarVolume": 472.6000000000001,
+    "formula": "C26H54O8",
+    "assumptions": "Linear pure C12 alcohol ethoxylate with exactly 7 EO units; one terminal OH, not a commercial homolog distribution.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-16",
+    "name": "Steareth-2",
+    "commonName": "Steareth-2 family",
+    "hsp": {
+      "d": 16.700924974306268,
+      "p": 1.9398341303367803,
+      "h": 8.17335303882226
+    },
+    "molarVolume": 389.20000000000005,
+    "formula": "C22H46O3",
+    "assumptions": "Linear pure C18 alcohol ethoxylate with exactly 2 EO units; one terminal OH, not a commercial homolog distribution.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-17",
+    "name": "Sorbitan monolaurate + 20 EO",
+    "commonName": "Polysorbate 20 / Tween 20-type family",
+    "hsp": {
+      "d": 17.90202869866403,
+      "p": 2.0640171543678574,
+      "h": 11.342362345318055
+    },
+    "molarVolume": 1010.5,
+    "formula": "C58H114O26",
+    "assumptions": "Ideal single-ring monoester with exactly 20 added EO units across all three free OH arms; three isolated terminal OH remain. Not an exact commercial polysorbate composition.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-18",
+    "name": "Sorbitan monostearate + 20 EO",
+    "commonName": "Polysorbate 60 / Tween 60-type family",
+    "hsp": {
+      "d": 17.80326980399241,
+      "p": 1.8839213571391198,
+      "h": 10.836230907470126
+    },
+    "molarVolume": 1107.1000000000001,
+    "formula": "C64H126O26",
+    "assumptions": "Ideal single-ring monoester with exactly 20 added EO units across all three free OH arms; three isolated terminal OH remain. Not an exact commercial polysorbate composition.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  },
+  {
+    "id": "hvk-19",
+    "name": "Sorbitan monooleate + 20 EO",
+    "commonName": "Polysorbate 80 / Tween 80-type family",
+    "hsp": {
+      "d": 17.760232325982393,
+      "p": 1.892811810952645,
+      "h": 10.86176955815565
+    },
+    "molarVolume": 1101.9,
+    "formula": "C64H124O26",
+    "assumptions": "Ideal single-ring monoester with exactly 20 added EO units across all three free OH arms; three isolated terminal OH remain. Not an exact commercial polysorbate composition.",
+    "source": "HVK/Fedors group estimate \u00b7 2009, Tables 7.3 & 7.10"
+  }
+]

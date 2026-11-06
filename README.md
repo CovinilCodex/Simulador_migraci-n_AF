@@ -1,72 +1,76 @@
-# AF Migration Lab
+# AF Migration Lab · Comparison Studio
 
-An interactive, browser-based simulator of a mobile anti-fog surfactant migrating through a multilayer polymer film. Built from the supplied mathematical brief; the implementation and its limits are described in [docs/MODEL.md](docs/MODEL.md). The original brief is retained in [docs/MATHEMATICAL_BRIEF.md](docs/MATHEMATICAL_BRIEF.md).
+Compare two multilayer anti-fog formulations at the same physical time, with one absolute concentration color scale. Includes 19 surfactant HSP estimates from the supplied Van Krevelen / te Nijenhuis research, independent temperatures, and an editable free-volume/crystallinity transport model.
 
 ## Run
 
-Requires Node.js **22.18+ or 24+** (native TypeScript stripping is used for the numerical tests) and npm. Development was verified with Node 24.22.1.
+Requires Node.js **22.18+ or 24+** and npm. Verified with Node 24.22.1.
 
 ```sh
-cd /workspace/Simulador_migraci-n_AF
 npm ci
 npm run dev
 ```
 
-Vite prints the development server address; the default port is 5173. For a production build:
+Open the address Vite prints (default port 5173). On Windows, file watching uses polling for mapped/network drives. If the drive still fails, copy to a local folder such as `C:\Projects\AF-Migration-Lab` and run the commands there. Production build:
 
 ```sh
 npm run build
 npm run preview
 ```
 
-On Windows, the development server uses polling for file changes so it can work on mapped or network drives. If a drive still does not support watching, copy the project to a local folder such as `C:\Projects\AF-Migration-Lab` and run `npm ci` followed by `npm run dev` there.
+No API keys or backend are required. Calculations run locally in a web worker. Each cloud task is isolated: use the existing checkout rather than creating a worktree unless requested.
 
-No backend, API keys, external fonts or online services are needed to run the installed app. The simulation runs in a web worker. Dependencies are installed from the npm registry using the lockfile. Each cloud task is already isolated; use the existing checkout without creating a Git worktree unless explicitly requested.
+## Compare formulations
 
-## Use the simulator
+1. **Edit formulation A / B** selects which recipe the left editor modifies. Each recipe independently holds its layers, surfactant, initial loading, temperature, boundary conditions and transport assumptions. **A → B** copies A into B without linking subsequent edits.
+2. Select, add, duplicate, remove or reorder up to eight polymer layers per recipe. Initial concentrations are active **mobile surfactant wt%**; `0.5` means 0.5 wt%. Layer thicknesses are µm.
+3. The surfactant menu contains **19 researched representative structures + Custom**. It includes glycerol esters, PGMS, diglyceryl stearate, sorbitan esters, PEG stearates, alcohol ethoxylates and polysorbates. HSP inputs use MPa½. **Research & structure** shows formula, estimated volume and composition assumptions. Editing HSP switches to Custom.
+4. Expand a layer's **HSP & transport** to change its HSP, radius, density, diffusion baseline and free-volume/morphology parameters. Polymer properties remain illustrative starting scenarios.
+5. Set temperature independently in the cards or active editor. Select **Free volume + crystallinity** or **Calibrated D₂₅ + Arrhenius**. The effective-transport tables show the actual D used for each layer. These two modes interpret the diffusion baseline differently; read the model notes before transferring a calibrated value.
+6. Choose dry reversible adsorption, washed adsorption, sealed or perfect-sink boundaries for each face. The two faces of a film are labeled Face A and Face B, separately from the formulation labels A and B.
+7. **Run both simulations**, then play/pause or scrub the shared timeline. Duration is deliberately shared: editing it changes both formulations, so a frame always represents the same physical time. The default comparison holds the formula fixed and compares 25°C with 45°C.
+8. Violet, cyan, rose or amber is the surfactant concentration hue. The two films use the **same absolute wt% scale**, fixed across all frames and both results. Layer-edge colors identify resins. Surface bars separately show fractional surface occupancy Γ/Γmax, not bulk wt%.
 
-1. Choose the polymer in each layer. Add, duplicate, remove or reorder up to eight layers. The list runs from face A to face B; physical thicknesses determine the visual widths.
-2. Set thickness in µm and the **active mobile surfactant** concentration in wt% for each layer. For example, `0.5` means 0.5 wt%, not a mass fraction of 0.5.
-3. Expand **HSP & transport** on each layer to edit its Hansen triplet, interaction radius R₀, density, log₁₀ D at 25°C and activation energy.
-4. Choose an illustrative surfactant profile or enter its own δD, δP and δH. All HSP inputs use MPa½. **HSP compatibility** shows a two-axis projection; marker size indicates δH, and RED uses all three components. The layer list remains available to select coincident points.
-5. Set temperature, duration and independent boundary conditions for faces A and B. Surface kinetics are available under **Test conditions → Surface kinetics**.
-6. Click **Run simulation**. Play/pause, change playback speed, restart or scrub the timeline. The cross-section, concentration profile and inventory cards share the same time. Surface-history curves show the full run faintly, with the elapsed portion emphasized.
-7. Export **Project settings (JSON)** to reproduce inputs, or **Simulation results (CSV)** for all 181 times and all spatial cells. Import a saved project to restore and simulate it. Valid settings also persist in browser local storage; no data is sent to a server.
+Changing model inputs marks results stale and disables playback/results export until rerun. Card inputs show the edited temperature; the result caption explicitly states the temperature used in the last run. Switching hue does not invalidate the numerical result. On mobile the two result cards stack; on desktop they are adjacent.
 
-Changing inputs marks existing results stale and disables their playback/CSV export until a new run completes. The HSP map and compatibility table show current input values immediately. Simulation views retain the last run's configuration until rerun.
+The concentration profiles have a shared concentration axis; their depth axes reflect each film's own thickness. Surface-history charts have shared time and inventory axes. Faint history curves show the complete run; the elapsed part is emphasized. The difference panel reports B−A at the selected time. Equal initial mass and controlled changes are needed to attribute differences to a particular mechanism.
 
-## Interpreting HSP and outputs
+## Research and model limitations
 
-**Every material preset is an illustrative starting point**, including polymer HSP, density, radius, D and activation energy. The surfactant profiles are explicitly synthetic examples; they do not represent a measured commercial product. The application does not include a validated material database.
+The 19 surfactant triplets are **Hoftyzer–Van Krevelen component estimates with Fedors-estimated molar volume**, based on explicit representative molecules. They are not measured HSP of commercial grades or a procurement-verified supplier database. Mixed esters, fatty-chain distributions, EO distributions and isomers require composition-specific treatment. The source calculations and full assumptions are in [docs/surfactant-screening/REPORT.md](docs/surfactant-screening/REPORT.md), with a reproducible Python calculation script and CSV/JSON audit data.
 
-Hansen parameters screen compatibility. They do **not** determine absolute solubility, the diffusion coefficient, surface capacity or anti-fog efficacy. The app uses a visible, editable heuristic to turn RED into relative affinity and interlayer partitioning. Supply material-specific measurements and calibrate that mapping before making quantitative decisions.
+The free-volume option is a **Doolittle-style phenomenological diffusion model**, not a direct calculation of each commercial resin's free volume from its name. Resin f₂₅, Tg, expansion slopes, crystalline fraction, B and the morphology exponent are editable assumptions. B and the baseline must be calibrated for the actual resin–surfactant pair. Molecular HSP or molar volume alone does not determine D. Arrhenius and free-volume temperature factors are alternatives, not multiplied together. No crystalline obstruction is reapplied to an already calibrated effective D₂₅ in Arrhenius mode.
 
-Surface inventory is reported in mg/m² of one film face. Film and removed inventories are normalized to the same planar film area. Surface occupancy is not an anti-fog efficacy score. Retained film percentage excludes both surface reservoirs and externally removed material.
+Surface inventory is **not** an AF efficacy score. There is no calibrated optical/contact-angle model, precipitation, melting/recrystallization, finite stagnant water bath, immobile reserve, swelling, or multicomponent competition. Surface kinetics and HSP are held fixed when temperature changes. Detailed equations, units and limits are in [docs/MODEL.md](docs/MODEL.md); the original brief is in [docs/MATHEMATICAL_BRIEF.md](docs/MATHEMATICAL_BRIEF.md).
 
-The model has one mobile component, fixed layer properties and an isothermal 1D geometry. It does not model finite water baths, crystals, swelling, micelles, immobile reserves, multiple competing surfactants, or contact angles. See the model notes for the precise implemented equations and limitations.
+## Save and export
+
+**Export → Project settings** saves a version-2 JSON containing both configurations and the hue. Import restores and simulates the pair. Version-1 single-formulation files import into the active case with legacy Arrhenius semantics and default values only for the new transport fields. The other case adopts the same duration. Valid older local settings are similarly migrated; their HSP values are preserved even if they came from an old demo.
+
+**Export → Simulation results** saves one CSV with a `formulation` A/B column, temperatures, concentrations, effective D, surface inventories, removed mass and conservation residuals at all recorded times and cells. Global inventories repeat on each cell row and **must not be summed over cells**. CSV exports are disabled while inputs are stale. Valid pair settings persist in browser local storage; no project data is uploaded.
+
+The research `screening.json` is an audit dataset, not a project file.
 
 ## Validation
 
 ```sh
-npm test          # Numerical/physical checks using node:test
-npm run build    # TypeScript check and production bundle
-npm run test:e2e # Chromium interaction tests
+npm test
+npm run build
+npm run test:e2e
 ```
 
-The browser tests use `/usr/bin/chromium` when available. Otherwise install Chromium with `npx playwright install chromium`, or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing browser executable. Browser tests start their own Vite server or reuse one on port 5173; the cloud sandbox may require execution permission for local servers and Chromium.
+Numerical tests cover independent analytical slab release, interlayer partition equilibrium, conservation, adsorption/desorption bounds, wash extraction, zero loading, spatial/time convergence, the researched library, free-volume thermal slopes, morphology limits, temperature-dependent extraction and legacy migration. Browser tests exercise the two independent cases, all library choices, common hue/time, recipe editing/copying, invalid inputs, JSON/CSV, local persistence and mobile layout.
 
-Numerical checks cover the Hansen metric, Arrhenius scaling, sealed films, analytical slab solutions with one/two sink faces, equilibrium partitioning, saturated surfaces, continuous washing, zero loading, desorption, mesh/time convergence and invalid inputs. Browser checks cover configuration editing, layer operations, HSP projection, playback, input validation, import/export round trips, local persistence, modal access and mobile width.
+Browser tests use `/usr/bin/chromium` when available; otherwise run `npx playwright install chromium` or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. The cloud sandbox may require execution permission for servers/Chromium.
 
-Conservation is necessary but does not prove convergence. Default settings use 24 cells per layer and 4,320 time steps; the solver accepts optional numerical resolution arguments for convergence studies. Strong HSP contrasts, very fast kinetics and extrapolated temperatures need additional resolution and measured validation.
+Default numerical resolution is 24 cells per layer and 4,320 steps. Conservation alone does not guarantee temporal/spatial accuracy. Use optional `simulate(config, {cellsPerLayer, frames, substeps})` arguments for additional convergence studies, especially for extreme affinities and rapid kinetics.
 
-## Code map
+## Source map
 
-- `src/solver.ts`: HSP metric, input validation, conservative finite volumes and bounded surface exchange.
-- `src/simulation.worker.ts`: simulation off the UI thread.
-- `src/materials.ts`: clearly labelled illustrative presets and the default scenario.
-- `src/App.tsx`: editable experiment, timeline, persistence and exports.
-- `src/visuals.tsx`: concentration cross-section, HSP map and time-dependent charts.
-- `tests/solver.test.ts`: numerical validation against independent known solutions.
-- `e2e/simulator.spec.ts`: functional browser checks.
-
-Settings JSON has a `schemaVersion: 1` envelope and the complete `config`. The CSV contains one row per cell per recorded time; global inventories are repeated on those rows for convenient analysis and must not be summed over cells.
+- `src/App.tsx`: pair configuration, synchronized playback, comparison output and project I/O.
+- `src/Editor.tsx`: active formulation's layer, HSP, temperature and transport editor.
+- `src/materials.ts`: researched surfactant library, illustrative resin parameters, legacy migration.
+- `src/data/surfactants.json`: full-precision screened HSP and structure metadata.
+- `src/solver.ts`: transport coefficients and conservative migration solver.
+- `src/visuals.tsx`: independent SVG fields with unique resources and shared plot scales.
+- `tests/solver.test.ts`, `e2e/simulator.spec.ts`: physical and functional verification.

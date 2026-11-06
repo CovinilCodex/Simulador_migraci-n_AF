@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  fractionalFreeVolume,
+  layerTransport,
   compatibility,
   diffusionAtTemperature,
   hansenDistance,
@@ -8,7 +10,12 @@ import {
   surfaceExchange,
   validateConfig,
 } from "../src/solver.ts";
-import { defaultConfig, makeLayer } from "../src/materials.ts";
+import {
+  defaultConfig,
+  makeLayer,
+  migrateLegacyConfig,
+  SURFACTANTS,
+} from "../src/materials.ts";
 import type { Config } from "../src/types.ts";
 
 function singleLayer(): Config {
@@ -23,6 +30,7 @@ function singleLayer(): Config {
       },
     ],
     beta: 0,
+    transportModel: "arrhenius",
     left: "sealed",
     right: "sealed",
     hours: 12,
@@ -198,4 +206,127 @@ test("invalid and malformed imports are rejected rather than silently repaired",
   c.layers[0].thickness = NaN;
   assert.ok(validateConfig(c).length > 0);
   assert.throws(() => simulate(c), /thickness/);
+});
+
+test("researched library contains 19 traceable group estimates and a custom entry", () => {
+  const research = SURFACTANTS.filter((s) => s.id);
+  assert.equal(research.length, 19);
+  assert.equal(new Set(research.map((s) => s.name)).size, 19);
+  for (const s of research) {
+    assert.ok(s.formula && s.assumptions && s.source);
+    assert.ok(s.molarVolume! > 0);
+    const c = defaultConfig();
+    c.surfactant = s;
+    assert.deepEqual(validateConfig(c), []);
+    const r = simulate(c, { frames: 11, substeps: 8 });
+    assert.ok(r.maxError < 1e-9);
+  }
+  const gms = research.find((s) => s.name === "Glyceryl monostearate")!;
+  assert.ok(Math.abs(gms.hsp.d - 6170 / 366.3) < 1e-10);
+  assert.ok(Math.abs(gms.hsp.p - Math.sqrt(740100) / 366.3) < 1e-10);
+  assert.ok(Math.abs(gms.hsp.h - Math.sqrt(47000 / 366.3)) < 1e-10);
+});
+test("free volume is continuous at Tg and responds with the appropriate slope", () => {
+  const l = {
+    ...makeLayer("Custom"),
+    tg: 40,
+    freeVolume25: 0.1,
+    alphaGlassy: 0.0001,
+    alphaRubbery: 0.0005,
+  };
+  assert.ok(Math.abs(fractionalFreeVolume(l, 40) - 0.1015) < 1e-12);
+  assert.ok(Math.abs(fractionalFreeVolume(l, 50) - 0.1065) < 1e-12);
+  assert.ok(Math.abs(fractionalFreeVolume(l, 25) - 0.1) < 1e-12);
+});
+test("Doolittle reference, free-volume obstruction and crystallinity have physical limits", () => {
+  const c = defaultConfig();
+  c.temperature = 25;
+  c.transportModel = "freeVolume";
+  const l = {
+    ...makeLayer("Custom"),
+    freeVolume25: 0.1,
+    crystallinity: 0,
+    logD: -14,
+  };
+  assert.equal(layerTransport(l, c).diffusion, 1e-14);
+  assert.ok(layerTransport({ ...l, freeVolume25: 0.08 }, c).diffusion < 1e-14);
+  assert.ok(layerTransport({ ...l, freeVolume25: 0.15 }, c).diffusion > 1e-14);
+  assert.ok(
+    Math.abs(
+      layerTransport({ ...l, crystallinity: 0.5 }, c).diffusion / 1e-14 -
+        Math.pow(0.5, c.tortuosity),
+    ) < 1e-12,
+  );
+  assert.equal(
+    layerTransport({ ...l, ea: 0 }, c).diffusion,
+    layerTransport({ ...l, ea: 150 }, c).diffusion,
+  );
+  c.transportModel = "arrhenius";
+  assert.equal(
+    layerTransport({ ...l, crystallinity: 0.9 }, c).diffusion,
+    1e-14,
+  );
+});
+test("warmer free-volume scenarios increase diffusion and sink extraction, conserving mass", () => {
+  const c = defaultConfig();
+  c.left = "sink";
+  c.right = "sink";
+  c.hours = 24;
+  const cold = simulate(
+    { ...c, temperature: 10 },
+    { frames: 61, substeps: 24 },
+  );
+  const warm = simulate(
+    { ...c, temperature: 55 },
+    { frames: 61, substeps: 24 },
+  );
+  assert.ok(
+    warm.cells.every((cell, i) => cell.diffusion > cold.cells[i].diffusion),
+  );
+  assert.ok(warm.frames.at(-1)!.filmMass < cold.frames.at(-1)!.filmMass);
+  assert.ok(warm.maxError < 1e-9 && cold.maxError < 1e-9);
+});
+test("invalid free-volume extrapolation is rejected rather than clamped", () => {
+  const c = defaultConfig();
+  c.layers[0].freeVolume25 = 0.01;
+  c.layers[0].alphaRubbery = 0.002;
+  c.temperature = 0;
+  assert.ok(validateConfig(c).some((e) => e.includes("selected temperature")));
+  assert.throws(() => simulate(c), /selected temperature/);
+});
+test("legacy projects preserve loading, HSP and Arrhenius semantics during migration", () => {
+  const original = defaultConfig();
+  const raw = structuredClone(original) as any;
+  delete raw.transportModel;
+  delete raw.freeVolumeB;
+  delete raw.tortuosity;
+  for (const l of raw.layers)
+    for (const key of [
+      "freeVolume25",
+      "tg",
+      "alphaGlassy",
+      "alphaRubbery",
+      "crystallinity",
+    ])
+      delete l[key];
+  const upgraded = migrateLegacyConfig(raw);
+  assert.equal(upgraded.transportModel, "arrhenius");
+  assert.equal(upgraded.layers[1].loading, original.layers[1].loading);
+  assert.deepEqual(upgraded.surfactant, original.surfactant);
+  assert.deepEqual(validateConfig(upgraded), []);
+});
+
+test("malformed research metadata cannot enter the editor via project import", () => {
+  const c = defaultConfig();
+  for (const [key, value] of [
+    ["source", {}],
+    ["molarVolume", "invalid"],
+    ["assumptions", []],
+  ]) {
+    const bad = {
+      ...c,
+      surfactant: { ...c.surfactant, [key as string]: value },
+    } as Config;
+    assert.ok(validateConfig(bad).length > 0);
+  }
 });

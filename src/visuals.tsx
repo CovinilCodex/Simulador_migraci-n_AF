@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { COLORS } from "./materials.ts";
 import { compatibility } from "./solver.ts";
 import type { Config, Frame, Result } from "./types.ts";
@@ -8,17 +9,9 @@ export function formatNumber(n: number, digits = 2) {
     minimumFractionDigits: digits,
   });
 }
-export function concentrationColor(fraction: number) {
+export function concentrationColor(fraction: number, hue = 280) {
   const t = Math.max(0, Math.min(1, fraction));
-  const stops = [
-    [240, 245, 235],
-    [171, 208, 156],
-    [69, 137, 112],
-    [24, 78, 72],
-  ];
-  const segment = Math.min(2, Math.floor(t * 3));
-  const local = t * 3 - segment;
-  return `rgb(${stops[segment].map((v, i) => Math.round(v + local * (stops[segment + 1][i] - v))).join(",")})`;
+  return `hsl(${hue}, ${30 + 45 * t}%, ${98 - 66 * t}%)`;
 }
 export function FilmView({
   result,
@@ -26,13 +19,16 @@ export function FilmView({
   selected,
   onSelect,
   scale,
+  hue = 280,
 }: {
   result: Result;
   frame: Frame;
   selected: number;
   onSelect: (i: number) => void;
   scale: number;
+  hue?: number;
 }) {
+  const uid = useId().replaceAll(":", "");
   const total = result.cells.reduce((sum, cell) => sum + cell.width, 0);
   const origin = 100,
     width = 600;
@@ -53,18 +49,18 @@ export function FilmView({
     >
       <defs>
         <pattern
-          id="film-grid"
+          id={`${uid}-grid`}
           width="20"
           height="20"
           patternUnits="userSpaceOnUse"
         >
           <circle cx="1" cy="1" r="0.75" fill="#dfe5df" />
         </pattern>
-        <clipPath id="film-front">
+        <clipPath id={`${uid}-front`}>
           <rect x="100" y="107" width="600" height="138" rx="2" />
         </clipPath>
       </defs>
-      <rect width="800" height="340" fill="url(#film-grid)" />
+      <rect width="800" height="340" fill={`url(#${uid}-grid)`} />
       <text x="38" y="43" className="svg-overline">
         FACE A
       </text>
@@ -110,7 +106,7 @@ export function FilmView({
             height="138"
             fill="#e6ede1"
           />
-          <g clipPath="url(#film-front)" shapeRendering="crispEdges">
+          <g clipPath={`url(#${uid}-front)`} shapeRendering="crispEdges">
             {result.cells.map(
               (cell, j) =>
                 cell.layer === i && (
@@ -122,6 +118,7 @@ export function FilmView({
                     height="138"
                     fill={concentrationColor(
                       ((frame.concentration[j] / cell.density) * 100) / scale,
+                      hue,
                     )}
                   />
                 ),
@@ -241,14 +238,19 @@ export function boundaryLabel(mode: string) {
 
 export function HansenView({
   config,
+  referenceConfigs,
   selected,
   onSelect,
 }: {
   config: Config;
+  referenceConfigs?: Config[];
   selected: number;
   onSelect: (i: number) => void;
 }) {
-  const all = [...config.layers.map((l) => l.hsp), config.surfactant.hsp];
+  const all = (referenceConfigs || [config]).flatMap((c) => [
+    ...c.layers.map((l) => l.hsp),
+    c.surfactant.hsp,
+  ]);
   const minD = Math.min(12, ...all.map((v) => v.d - 2));
   const maxD = Math.max(22, ...all.map((v) => v.d + 2));
   const maxP = Math.max(14, ...all.map((v) => v.p + 2));
@@ -502,13 +504,15 @@ export function ProfileChart({
 export function SurfaceChart({
   result,
   index,
+  sharedCapacity,
 }: {
   result: Result;
   index: number;
+  sharedCapacity?: number;
 }) {
   const yMax =
     Math.max(
-      result.config.surfaceCapacity,
+      sharedCapacity ?? result.config.surfaceCapacity,
       ...result.frames.map((f) => Math.max(...f.surface) * 1e6),
     ) * 1.05;
   const px = (hours: number) => 44 + (hours / result.config.hours) * 366;
