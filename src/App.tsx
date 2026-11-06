@@ -30,9 +30,9 @@ import {
 } from "./visuals.tsx";
 import type { Config, Result } from "./types.ts";
 
-const STORAGE = "af-migration-comparison-v2";
+const STORAGE = "af-migration-comparison-v3";
 type Pair = [Config, Config];
-type Workspace = { configs: Pair; hue: number };
+type Workspace = { configs: Pair; hue: number; migrationNotice?: string };
 function freshWorkspace(): Workspace {
   const a = defaultConfig();
   const b = structuredClone(a);
@@ -55,6 +55,18 @@ function readWorkspace(): Workspace {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE) || "null");
     if (saved && !workspaceErrors(saved).length) return saved;
+    const prior = JSON.parse(
+      localStorage.getItem("af-migration-comparison-v2") || "null",
+    );
+    if (Array.isArray(prior?.configs) && prior.configs.length === 2) {
+      const migrated = {
+        configs: prior.configs.map(migrateLegacyConfig) as Pair,
+        hue: prior.hue,
+        migrationNotice:
+          "Previous project converted to transition-aware diffusion. Former free-volume reference values were converted to effective D25; review the new transition temperatures and activation energies.",
+      };
+      if (!workspaceErrors(migrated).length) return migrated;
+    }
     const old = JSON.parse(
       localStorage.getItem("af-migration-lab-v1") || "null",
     );
@@ -62,8 +74,13 @@ function readWorkspace(): Workspace {
       const a = migrateLegacyConfig(old);
       if (!validateConfig(a).length) {
         const b = structuredClone(a);
-        b.temperature = Math.min(80, a.temperature + 20);
-        return { configs: [a, b], hue: 280 };
+        b.temperature = Math.min(300, a.temperature + 20);
+        return {
+          configs: [a, b],
+          hue: 280,
+          migrationNotice:
+            "Legacy project converted. Equal regime activation energies preserve its original Arrhenius temperature response until you edit them.",
+        };
       }
     }
   } catch {
@@ -177,7 +194,7 @@ export default function App() {
     } catch {
       /* optional */
     }
-  }, [workspace.hue]);
+  }, [workspace.hue, workspace.migrationNotice]);
   useEffect(() => {
     if (!playing || busy || dirty || !results) return;
     const timer = setInterval(
@@ -205,15 +222,30 @@ export default function App() {
         throw new Error("Choose a project smaller than 1 MB.");
       const data = JSON.parse(await file.text());
       let next: Workspace;
-      if (data.schemaVersion === 2)
+      if (data.schemaVersion === 3)
         next = { configs: data.configs, hue: data.hue };
-      else if (data.schemaVersion === 1) {
+      else if (data.schemaVersion === 2) {
+        if (!Array.isArray(data.configs) || data.configs.length !== 2)
+          throw new Error("A comparison needs two formulations.");
+        next = {
+          configs: data.configs.map(migrateLegacyConfig) as Pair,
+          hue: data.hue,
+          migrationNotice:
+            "Imported v2 project converted: former free-volume baselines were evaluated at 25°C. Review Tg, Tm and regime energies before interpreting results.",
+        };
+      } else if (data.schemaVersion === 1) {
         const c = migrateLegacyConfig(data.config);
         const configs = [...workspace.configs] as Pair;
         configs[active] = c;
         configs[1 - active] = { ...configs[1 - active], hours: c?.hours };
-        next = { ...workspace, configs };
-      } else throw new Error("Choose an AF Migration Lab v1 or v2 project.");
+        next = {
+          ...workspace,
+          configs,
+          migrationNotice:
+            "Imported legacy project: the original activation energy is used in all regimes until edited.",
+        };
+      } else
+        throw new Error("Choose an AF Migration Lab v1, v2 or v3 project.");
       const problems = workspaceErrors(next);
       if (problems.length) throw new Error(problems[0]);
       setWorkspace(next);
@@ -280,7 +312,7 @@ export default function App() {
           </button>
         </nav>
         <span className="workspace-status">
-          <span className="status-dot" /> Local workspace · v2
+          <span className="status-dot" /> Local workspace · v2.1
         </span>
       </header>
       <main className="comparison-app">
@@ -289,7 +321,7 @@ export default function App() {
             <div className="eyebrow">MULTILAYER AF · FORMULATION STUDIO</div>
             <h1>Two formulations. One clear comparison.</h1>
             <p>
-              Research-based surfactant estimates, resin free volume and
+              Research-based surfactant estimates, polymer transitions and
               temperature-dependent migration.
             </p>
           </div>
@@ -322,7 +354,7 @@ export default function App() {
                         saveFile(
                           "af-comparison-project.json",
                           JSON.stringify(
-                            { schemaVersion: 2, ...workspace },
+                            { schemaVersion: 3, ...workspace },
                             null,
                             2,
                           ),
@@ -417,6 +449,21 @@ export default function App() {
                 {busy ? "Calculating both…" : "Run both simulations"}
               </button>
             </section>
+            {workspace.migrationNotice && (
+              <div className="migration-banner">
+                <Info size={15} />
+                <span>{workspace.migrationNotice}</span>
+                <button
+                  className="icon-button"
+                  aria-label="Dismiss conversion note"
+                  onClick={() =>
+                    setWorkspace((w) => ({ ...w, migrationNotice: undefined }))
+                  }
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             {errors.length > 0 && (
               <div className="error-banner" role="alert">
                 <Info size={16} />
@@ -623,7 +670,7 @@ export default function App() {
               <Info size={16} />
               <p>
                 Surfactant HSP values are group-contribution estimates for ideal
-                representative molecules. Resin free-volume and transport
+                representative molecules. Polymer transition and transport
                 presets are editable theoretical scenarios. Surface inventory is
                 not a calibrated anti-fog efficacy score.
               </p>
@@ -747,8 +794,8 @@ function ScenarioView({
         <Field
           label={`Temperature ${label}`}
           value={config.temperature}
-          min={0}
-          max={80}
+          min={-150}
+          max={300}
           unit="°C"
           onChange={onTemperature}
         />
@@ -787,6 +834,12 @@ function ScenarioView({
           </div>
         )}
       </div>
+      {c.layers.some((l) => layerTransport(l, c).regime === "Molten") && (
+        <div className="phase-note">
+          At or above Tm: this is a diffusion-only molten-regime estimate. Film
+          geometry is held fixed; melt flow and deformation are not simulated.
+        </div>
+      )}
       <div className="case-inventories">
         <div>
           <span>Face A · surface</span>
@@ -856,18 +909,14 @@ function ScenarioView({
       <div className="transport-readout">
         <div>
           <h3>Effective layer transport</h3>
-          <span>
-            {c.transportModel === "freeVolume"
-              ? "Free-volume model"
-              : "Arrhenius model"}
-          </span>
+          <span>Transition-aware Arrhenius</span>
         </div>
         <table>
           <thead>
             <tr>
               <th>Resin</th>
-              <th>f(T)</th>
-              <th>Xc</th>
+              <th>Tg / Tm (°C)</th>
+              <th>Regime</th>
               <th>D (m²/s)</th>
             </tr>
           </thead>
@@ -879,8 +928,17 @@ function ScenarioView({
                   <td>
                     {i + 1} · {l.name}
                   </td>
-                  <td>{formatNumber(t.freeVolume, 3)}</td>
-                  <td>{formatNumber(l.crystallinity, 2)}</td>
+                  <td>
+                    {formatNumber(l.tg, 0)} /{" "}
+                    {l.tm === null ? "—" : formatNumber(l.tm, 0)}
+                  </td>
+                  <td>
+                    <span
+                      className={`regime-tag regime-${t.regime.toLowerCase().replaceAll(" ", "-")}`}
+                    >
+                      {t.regime}
+                    </span>
+                  </td>
                   <td>{t.diffusion.toExponential(2)}</td>
                 </tr>
               );
@@ -888,9 +946,9 @@ function ScenarioView({
           </tbody>
         </table>
         <p>
-          {c.transportModel === "freeVolume"
-            ? "Theoretical f(T) and crystalline obstruction modify the common-reference baseline."
-            : "Uses effective D₂₅ and Ea; no additional morphology correction applied."}
+          Effective D₂₅ anchors the curve. Ea changes at Tg and Tm; diffusion is
+          continuous across both transitions. “Above Tg” refers to the amorphous
+          phase of a solid semicrystalline film.
         </p>
       </div>
     </section>
@@ -955,32 +1013,32 @@ function ModelNotes() {
         </p>
       </section>
       <section>
-        <h3>Temperature and resin free volume</h3>
+        <h3>Polymer transitions and migration regimes</h3>
         <p>
-          Free volume is an assumed fractional free volume of the amorphous
-          phase, not porosity or simply 1−crystallinity. Each resin has editable
-          f₂₅, Tg, slopes below/above Tg and crystalline fraction Xc. Values are
-          illustrative theoretical scenarios, not grade-specific measured data.
+          Each resin has editable Tg, optional Tm, effective D25, and activation
+          energies below Tg, above Tg and above Tm. Below Tg is labeled Glassy;
+          above Tg but below Tm is Above Tg (the amorphous phase is mobile while
+          crystallites can still support the film). For an amorphous polymer
+          with no Tm, the upper regime is Rubbery. At/above Tm the regime is
+          Molten.
         </p>
-        <code>
-          f(T) = f₂₅ + αg[min(T,Tg)−min(25,Tg)] + αr[max(T,Tg)−max(25,Tg)]
-        </code>
-        <code>D(T) = Dbase · exp[−B(1/f(T)−1/0.10)] · (1−Xc)^τ</code>
+        <code>ln[D(Tb)/D(Ta)] = −Ea,regime/R · (1/Tb − 1/Ta)</code>
         <p>
-          This Doolittle-style model references Dbase to f=0.10 in a fully
-          amorphous host. B and τ require calibration for the selected
-          resin–surfactant pair; they are not predicted by the PDF. Temperature
-          acts through f(T) in this mode, with no additional Arrhenius
-          multiplier. Xc is held constant; melting, recrystallization and
-          temperature-dependent phase changes are not modeled. Out-of-range free
-          volume is rejected, not silently clipped.
+          The solver splits the path from 25°C to the selected temperature at
+          each transition and adds the logarithmic Arrhenius increments.
+          Temperatures in the equation are kelvin; input Ea is kJ/mol. D is
+          continuous at Tg and Tm, and always equals D25 at 25°C even when that
+          reference lies above a transition. Equal energies recover the original
+          single Arrhenius law.
         </p>
         <p>
-          Alternatively choose Calibrated D₂₅ + Arrhenius: D(T)=D₂₅
-          exp[−Ea/R(1/T−1/298.15)]. Here D₂₅ already includes morphology, and
-          f/Xc corrections are not applied. The diffusion baseline has a
-          different reference meaning in the two modes; do not reuse a
-          calibrated effective D₂₅ as Dbase without refitting.
+          Transition temperatures alone do not determine migration rates. Preset
+          transition temperatures and regime activation energies are approximate
+          starting values, not grade measurements. There is no universal step
+          multiplier at melting. Fit D25 and the regime energies to your actual
+          resin–surfactant data. Above Tm, the model predicts diffusion in a
+          fixed geometry and does not model melt flow, deformation or
+          degradation. HSP and surface kinetics stay at their reference values.
         </p>
       </section>
       <section>

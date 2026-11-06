@@ -5,24 +5,7 @@ import researchedSurfactants from "./data/surfactants.json" with { type: "json" 
 // Illustrative starting values, not a measured material database. See docs/MODEL.md.
 export const POLYMERS: Record<
   string,
-  Omit<
-    Layer,
-    | "id"
-    | "polymer"
-    | "thickness"
-    | "loading"
-    | "freeVolume25"
-    | "tg"
-    | "alphaGlassy"
-    | "alphaRubbery"
-    | "crystallinity"
-  > &
-    Partial<
-      Pick<
-        Layer,
-        "freeVolume25" | "tg" | "alphaGlassy" | "alphaRubbery" | "crystallinity"
-      >
-    >
+  Omit<Layer, "id" | "polymer" | "thickness" | "loading">
 > = {
   LDPE: {
     name: "LDPE",
@@ -30,7 +13,11 @@ export const POLYMERS: Record<
     hsp: { d: 16, p: 0, h: 0 },
     radius: 6,
     logD: -14,
-    ea: 45,
+    ea: 60,
+    eaRubbery: 45,
+    eaMelt: 30,
+    tg: -110,
+    tm: 110,
   },
   LLDPE: {
     name: "LLDPE",
@@ -38,7 +25,11 @@ export const POLYMERS: Record<
     hsp: { d: 16.2, p: 0.2, h: 0.5 },
     radius: 6,
     logD: -14.2,
-    ea: 45,
+    ea: 60,
+    eaRubbery: 45,
+    eaMelt: 30,
+    tg: -110,
+    tm: 122,
   },
   HDPE: {
     name: "HDPE",
@@ -46,7 +37,11 @@ export const POLYMERS: Record<
     hsp: { d: 16.5, p: 0, h: 0 },
     radius: 6,
     logD: -15,
-    ea: 50,
+    ea: 65,
+    eaRubbery: 50,
+    eaMelt: 30,
+    tg: -110,
+    tm: 133,
   },
   PP: {
     name: "Polypropylene",
@@ -54,7 +49,11 @@ export const POLYMERS: Record<
     hsp: { d: 16.5, p: 0, h: 0 },
     radius: 6,
     logD: -14.6,
-    ea: 50,
+    ea: 65,
+    eaRubbery: 50,
+    eaMelt: 30,
+    tg: -10,
+    tm: 165,
   },
   EVA: {
     name: "EVA",
@@ -62,7 +61,11 @@ export const POLYMERS: Record<
     hsp: { d: 16.8, p: 3, h: 5.5 },
     radius: 7,
     logD: -13.7,
-    ea: 40,
+    ea: 55,
+    eaRubbery: 40,
+    eaMelt: 25,
+    tg: -25,
+    tm: 90,
   },
   PET: {
     name: "PET",
@@ -71,6 +74,10 @@ export const POLYMERS: Record<
     radius: 6,
     logD: -16,
     ea: 60,
+    eaRubbery: 50,
+    eaMelt: 30,
+    tg: 75,
+    tm: 255,
   },
   PA6: {
     name: "PA6",
@@ -79,6 +86,10 @@ export const POLYMERS: Record<
     radius: 7,
     logD: -15,
     ea: 55,
+    eaRubbery: 45,
+    eaMelt: 30,
+    tg: 50,
+    tm: 220,
   },
   Custom: {
     name: "Custom polymer",
@@ -86,7 +97,11 @@ export const POLYMERS: Record<
     hsp: { d: 17, p: 4, h: 5 },
     radius: 6,
     logD: -14,
-    ea: 45,
+    ea: 60,
+    eaRubbery: 45,
+    eaMelt: 30,
+    tg: 20,
+    tm: null,
   },
 };
 export const SURFACTANTS: Surfactant[] = [
@@ -97,73 +112,6 @@ export const SURFACTANTS: Surfactant[] = [
     source: "User-defined HSP",
   },
 ];
-// Phenomenological amorphous fractional-free-volume estimates. Not grade measurements.
-export const RESIN_FREE_VOLUME: Record<
-  string,
-  Pick<
-    Layer,
-    "freeVolume25" | "tg" | "alphaGlassy" | "alphaRubbery" | "crystallinity"
-  >
-> = {
-  LDPE: {
-    freeVolume25: 0.12,
-    tg: -110,
-    alphaGlassy: 0.0001,
-    alphaRubbery: 0.0004,
-    crystallinity: 0.4,
-  },
-  LLDPE: {
-    freeVolume25: 0.11,
-    tg: -110,
-    alphaGlassy: 0.0001,
-    alphaRubbery: 0.0004,
-    crystallinity: 0.45,
-  },
-  HDPE: {
-    freeVolume25: 0.08,
-    tg: -110,
-    alphaGlassy: 0.0001,
-    alphaRubbery: 0.0004,
-    crystallinity: 0.7,
-  },
-  PP: {
-    freeVolume25: 0.1,
-    tg: -10,
-    alphaGlassy: 0.0001,
-    alphaRubbery: 0.0004,
-    crystallinity: 0.5,
-  },
-  EVA: {
-    freeVolume25: 0.14,
-    tg: -25,
-    alphaGlassy: 0.0001,
-    alphaRubbery: 0.0004,
-    crystallinity: 0.2,
-  },
-  PET: {
-    freeVolume25: 0.045,
-    tg: 75,
-    alphaGlassy: 0.0001,
-    alphaRubbery: 0.0004,
-    crystallinity: 0.3,
-  },
-  PA6: {
-    freeVolume25: 0.06,
-    tg: 50,
-    alphaGlassy: 0.0001,
-    alphaRubbery: 0.0004,
-    crystallinity: 0.35,
-  },
-  Custom: {
-    freeVolume25: 0.1,
-    tg: 20,
-    alphaGlassy: 0.0001,
-    alphaRubbery: 0.0004,
-    crystallinity: 0,
-  },
-};
-for (const [key, values] of Object.entries(RESIN_FREE_VOLUME))
-  Object.assign(POLYMERS[key], values);
 export const COLORS = [
   "#28645c",
   "#ce994b",
@@ -180,7 +128,6 @@ export function makeLayer(
 ): Layer {
   return {
     ...structuredClone(POLYMERS[polymer]),
-    ...RESIN_FREE_VOLUME[polymer],
     id,
     polymer,
     thickness: 15,
@@ -195,9 +142,6 @@ export function defaultConfig(): Config {
       makeLayer("LDPE", "layer-c"),
     ],
     surfactant: structuredClone(SURFACTANTS[2]),
-    transportModel: "freeVolume",
-    freeVolumeB: 0.15,
-    tortuosity: 1.5,
     beta: 1,
     temperature: 25,
     hours: 72,
@@ -210,22 +154,57 @@ export function defaultConfig(): Config {
   };
 }
 
-/** Upgrade only the new transport fields of a legacy single-formulation project. */
+/** Convert v1/v2 files explicitly; current v3 files are validated without repair. */
 export function migrateLegacyConfig(input: Config): Config {
   if (!input || !Array.isArray(input.layers)) return input;
+  const { transportModel, freeVolumeB, tortuosity, ...rest } = input as any;
   return {
-    ...input,
-    transportModel: input.transportModel ?? "arrhenius",
-    freeVolumeB: input.freeVolumeB ?? 0.15,
-    tortuosity: input.tortuosity ?? 1.5,
-    layers: input.layers.map(
-      (l) =>
-        l && {
-          ...RESIN_FREE_VOLUME[
-            l.polymer in RESIN_FREE_VOLUME ? l.polymer : "Custom"
-          ],
-          ...l,
-        },
-    ),
+    ...rest,
+    layers: input.layers.map((raw: any) => {
+      if (!raw || typeof raw !== "object") return raw;
+      const {
+        freeVolume25,
+        alphaGlassy,
+        alphaRubbery,
+        crystallinity,
+        ...layer
+      } = raw;
+      const defaults =
+        POLYMERS[
+          Object.hasOwn(POLYMERS, layer.polymer) ? layer.polymer : "Custom"
+        ];
+      let logD = layer.logD;
+      if (transportModel === "freeVolume") {
+        if (
+          ![freeVolume25, crystallinity, freeVolumeB, tortuosity, logD].every(
+            (v) => typeof v === "number" && Number.isFinite(v),
+          ) ||
+          freeVolume25 <= 0 ||
+          crystallinity < 0 ||
+          crystallinity >= 1
+        )
+          throw new Error(
+            "Legacy free-volume inputs are incomplete. Supply a calibrated D25 before importing.",
+          );
+        // Preserve the former model's effective diffusivity at 25°C, not its hypothetical prefactor.
+        logD +=
+          (-freeVolumeB * (1 / freeVolume25 - 10) +
+            tortuosity * Math.log(1 - crystallinity)) /
+          Math.LN10;
+      }
+      return {
+        ...layer,
+        logD,
+        tg: layer.tg === undefined ? defaults.tg : layer.tg,
+        tm: layer.tm === undefined ? defaults.tm : layer.tm,
+        ea: transportModel === "freeVolume" ? defaults.ea : layer.ea,
+        eaRubbery:
+          layer.eaRubbery ??
+          (transportModel === "freeVolume" ? defaults.eaRubbery : layer.ea),
+        eaMelt:
+          layer.eaMelt ??
+          (transportModel === "freeVolume" ? defaults.eaMelt : layer.ea),
+      };
+    }),
   };
 }

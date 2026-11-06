@@ -1,24 +1,51 @@
 import type { Cell, Config, Frame, HSP, Layer, Result } from "./types.ts";
 
-export function fractionalFreeVolume(layer: Layer, temperature: number) {
-  return (
-    layer.freeVolume25 +
-    layer.alphaGlassy *
-      (Math.min(temperature, layer.tg) - Math.min(25, layer.tg)) +
-    layer.alphaRubbery *
-      (Math.max(temperature, layer.tg) - Math.max(25, layer.tg))
-  );
+export type MigrationRegime = "Glassy" | "Above Tg" | "Rubbery" | "Molten";
+export function migrationRegime(
+  layer: Layer,
+  temperature: number,
+): MigrationRegime {
+  if (layer.tm !== null && temperature >= layer.tm) return "Molten";
+  if (temperature < layer.tg) return "Glassy";
+  return layer.tm === null ? "Rubbery" : "Above Tg";
 }
-/** Doolittle-style scenario model, referenced to f=0.10 at 25°C, fully amorphous. */
-export function layerTransport(layer: Layer, config: Config) {
-  const freeVolume = fractionalFreeVolume(layer, config.temperature);
-  const morphologyFactor = (1 - layer.crystallinity) ** config.tortuosity;
-  const factor = Math.exp(-config.freeVolumeB * (1 / freeVolume - 1 / 0.1));
+function regimeEnergy(layer: Layer, temperature: number) {
+  return layer.tm !== null && temperature >= layer.tm
+    ? layer.eaMelt
+    : temperature >= layer.tg
+      ? layer.eaRubbery
+      : layer.ea;
+}
+/** Continuous, piecewise Arrhenius curve, always anchored to effective D at 25°C. */
+export function layerTransport(
+  layer: Layer,
+  config: Pick<Config, "temperature">,
+) {
+  const temperature = config.temperature;
+  const low = Math.min(25, temperature),
+    high = Math.max(25, temperature);
+  const boundaries = [
+    low,
+    ...[layer.tg, layer.tm].filter(
+      (t): t is number => t !== null && t > low && t < high,
+    ),
+    high,
+  ].sort((a, b) => a - b);
+  let integral = 0;
+  for (let i = 1; i < boundaries.length; i++) {
+    const a = boundaries[i - 1],
+      b = boundaries[i];
+    integral +=
+      ((-regimeEnergy(layer, (a + b) / 2) * 1000) / 8.314462618) *
+      (1 / (b + 273.15) - 1 / (a + 273.15));
+  }
   const diffusion =
-    config.transportModel === "freeVolume"
-      ? 10 ** layer.logD * factor * morphologyFactor
-      : diffusionAtTemperature(layer.logD, layer.ea, config.temperature);
-  return { freeVolume, morphologyFactor, factor, diffusion };
+    10 ** layer.logD * Math.exp((temperature >= 25 ? 1 : -1) * integral);
+  return {
+    diffusion,
+    regime: migrationRegime(layer, temperature),
+    activationEnergy: regimeEnergy(layer, temperature),
+  };
 }
 
 export function hansenDistance(a: HSP, b: HSP): number {
@@ -76,25 +103,16 @@ export function validateConfig(c: Config): string[] {
     check(l.loading, 0, 10, `Layer ${i + 1} loading (wt%)`);
     check(l.density, 500, 2500, `Layer ${i + 1} density`);
     check(l.radius, 0.5, 30, `Layer ${i + 1} HSP radius`);
-    check(l.logD, -20, -10, `Layer ${i + 1} log₁₀ D`);
-    check(l.ea, 0, 150, `Layer ${i + 1} activation energy`);
-    check(
-      l.freeVolume25,
-      0.01,
-      0.4,
-      `Layer ${i + 1} fractional free volume at 25°C`,
-    );
-    check(l.tg, -150, 200, `Layer ${i + 1} Tg (°C)`);
-    check(l.alphaGlassy, 0, 0.002, `Layer ${i + 1} glassy expansion (K⁻¹)`);
-    check(l.alphaRubbery, 0, 0.002, `Layer ${i + 1} rubbery expansion (K⁻¹)`);
-    check(l.crystallinity, 0, 0.95, `Layer ${i + 1} crystalline fraction`);
-    if (c.transportModel === "freeVolume")
-      check(
-        fractionalFreeVolume(l, c.temperature),
-        0.005,
-        0.5,
-        `Layer ${i + 1} free volume at selected temperature`,
-      );
+    check(l.logD, -30, -8, `Layer ${i + 1} log₁₀ D`);
+    check(l.ea, 0, 150, `Layer ${i + 1} activation energy below Tg`);
+    check(l.tg, -150, 250, `Layer ${i + 1} Tg (°C)`);
+    if (l.tm !== null) {
+      check(l.tm, -140, 400, `Layer ${i + 1} Tm (°C)`);
+      if (l.tm <= l.tg)
+        errors.push(`Layer ${i + 1}: Tm must be greater than Tg.`);
+    }
+    check(l.eaRubbery, 0, 150, `Layer ${i + 1} activation energy above Tg`);
+    check(l.eaMelt, 0, 150, `Layer ${i + 1} melt activation energy`);
     for (const key of ["d", "p", "h"] as const)
       check(l.hsp?.[key], 0, 40, `Layer ${i + 1} HSP ${key}`);
   });
@@ -128,11 +146,7 @@ export function validateConfig(c: Config): string[] {
       "Surfactant molar volume (cm³/mol)",
     );
   check(c.beta, 0, 5, "HSP sensitivity β");
-  if (!["arrhenius", "freeVolume"].includes(c.transportModel))
-    errors.push("Choose a transport model.");
-  check(c.freeVolumeB, 0, 1, "Free-volume coefficient B");
-  check(c.tortuosity, 0, 4, "Morphology exponent τ");
-  check(c.temperature, 0, 80, "Temperature (°C)");
+  check(c.temperature, -150, 300, "Temperature (°C)");
   check(c.hours, 0.1, 720, "Duration (h)");
   check(c.surfaceCapacity, 0.01, 100, "Surface capacity (mg/m²)");
   check(c.logAdsorption, -16, -6, "log₁₀ adsorption velocity");

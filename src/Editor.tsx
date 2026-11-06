@@ -255,69 +255,81 @@ function LayerCard({
               onChange={(density) => change({ density })}
             />
           </div>
+          <Field
+            label="log₁₀ D at 25°C"
+            title="Effective diffusion coefficient at 25°C in m²/s. This anchors the entire temperature curve, regardless of the regime at 25°C."
+            value={layer.logD}
+            min={-30}
+            max={-8}
+            onChange={(logD) => change({ logD })}
+          />
+          <p className="control-note">
+            Polymer transitions · edit for your grade
+          </p>
           <div className="two-fields">
             <Field
-              label="log₁₀ diffusion baseline"
-              title="In Arrhenius mode: measured effective D25. In free-volume mode: baseline at f=0.10 in fully amorphous material. Units m²/s."
-              value={layer.logD}
-              min={-20}
-              max={-10}
-              onChange={(logD) => change({ logD })}
+              label="Glass transition Tg"
+              value={layer.tg}
+              min={-150}
+              max={250}
+              unit="°C"
+              onChange={(tg) => change({ tg })}
             />
+            {layer.tm !== null && (
+              <Field
+                label="Melting transition Tm"
+                value={layer.tm}
+                min={-140}
+                max={400}
+                unit="°C"
+                onChange={(tm) => change({ tm })}
+              />
+            )}
+          </div>
+          <label className="transition-checkbox">
+            <input
+              type="checkbox"
+              checked={layer.tm !== null}
+              onChange={(e) =>
+                change({
+                  tm: e.target.checked ? Math.max(160, layer.tg + 50) : null,
+                })
+              }
+            />{" "}
+            Has a melting transition
+          </label>
+          <p className="control-note">
+            Activation energies · kJ/mol. Each controls the temperature slope in
+            its regime; D remains continuous at the transitions.
+          </p>
+          <div className="two-fields">
             <Field
-              label="Activation energy"
+              label="Ea below Tg"
               value={layer.ea}
               min={0}
               max={150}
               unit="kJ/mol"
               onChange={(ea) => change({ ea })}
             />
-          </div>
-          <p className="control-note">
-            Theoretical amorphous free volume & morphology
-          </p>
-          <div className="two-fields">
             <Field
-              label="Free volume f₂₅"
-              value={layer.freeVolume25}
-              min={0.01}
-              max={0.4}
-              onChange={(freeVolume25) => change({ freeVolume25 })}
-            />
-            <Field
-              label="Crystalline fraction Xc"
-              value={layer.crystallinity}
+              label="Ea above Tg"
+              value={layer.eaRubbery}
               min={0}
-              max={0.95}
-              onChange={(crystallinity) => change({ crystallinity })}
+              max={150}
+              unit="kJ/mol"
+              onChange={(eaRubbery) => change({ eaRubbery })}
             />
           </div>
-          <div className="two-fields">
+          {layer.tm !== null && (
             <Field
-              label="Glass transition Tg"
-              value={layer.tg}
-              min={-150}
-              max={200}
-              unit="°C"
-              onChange={(tg) => change({ tg })}
-            />
-            <Field
-              label="Glassy expansion"
-              value={layer.alphaGlassy}
+              label="Ea above Tm"
+              value={layer.eaMelt}
               min={0}
-              max={0.002}
-              unit="K⁻¹"
-              onChange={(alphaGlassy) => change({ alphaGlassy })}
+              max={150}
+              unit="kJ/mol"
+              onChange={(eaMelt) => change({ eaMelt })}
             />
-          </div>
-          <Field
-            label="Rubbery expansion"
-            value={layer.alphaRubbery}
-            min={0}
-            max={0.002}
-            unit="K⁻¹"
-            onChange={(alphaRubbery) => change({ alphaRubbery })}
-          />
+          )}
           <div className="reorder">
             <span>Position in film</span>
             <button
@@ -520,52 +532,16 @@ export function ConfigurationEditor({
           title="Test conditions"
           number="03"
         />
-        <label className="field">
-          <span className="field-label">Transport model</span>
-          <select
-            className="full-select"
-            value={config.transportModel}
-            onChange={(e) =>
-              update({
-                transportModel: e.target.value as Config["transportModel"],
-              })
-            }
-          >
-            <option value="freeVolume">Free volume + crystallinity</option>
-            <option value="arrhenius">Calibrated D₂₅ + Arrhenius</option>
-          </select>
-        </label>
-        {config.transportModel === "freeVolume" && (
-          <>
-            <div className="two-fields spaced">
-              <Field
-                label="Free-volume B"
-                value={config.freeVolumeB}
-                min={0}
-                max={1}
-                onChange={(freeVolumeB) => update({ freeVolumeB })}
-              />
-              <Field
-                label="Morphology exponent τ"
-                value={config.tortuosity}
-                min={0}
-                max={4}
-                onChange={(tortuosity) => update({ tortuosity })}
-              />
-            </div>
-            <p className="control-note">
-              Dbase is referenced to f = 0.10, fully amorphous. Ea is unused in
-              this mode. Free-volume presets are theoretical scenarios, not
-              resin-grade measurements.
-            </p>
-          </>
-        )}
+        <p className="control-note">
+          Transition-aware Arrhenius diffusion. Tg and Tm are set per layer
+          under HSP & transport.
+        </p>
         <div className="two-fields spaced">
           <Field
             label="Temperature"
             value={config.temperature}
-            min={0}
-            max={80}
+            min={-150}
+            max={300}
             unit="°C"
             onChange={(temperature) => update({ temperature })}
           />

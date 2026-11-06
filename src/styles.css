@@ -2584,3 +2584,65 @@ input[type="range"]:disabled {
     font-size: 9px;
   }
 }
+
+/* Temperature-regime indicators */
+.transition-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  color: #6e805f;
+  line-height: 1.5;
+}
+.transition-checkbox input {
+  accent-color: #416c38;
+}
+.regime-tag {
+  display: inline-block;
+  font-size: 8px;
+  padding: 4px 5px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.regime-glassy {
+  background: #edf1fa;
+  color: #5b7097;
+}
+.regime-above-tg,
+.regime-rubbery {
+  background: #edf4e6;
+  color: #5b7b44;
+}
+.regime-molten {
+  background: #fff0df;
+  color: #a66d2d;
+}
+.phase-note,
+.migration-banner {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  font-size: 10px;
+  line-height: 1.7;
+  padding: 12px 15px;
+  background: #fff8eb;
+  border-top: 1px solid #f0e4c9;
+  color: #947440;
+}
+.migration-banner {
+  border: 1px solid #dce5d1;
+  border-radius: 7px;
+  margin-bottom: 14px;
+  background: #f4f7ee;
+  color: #70835f;
+}
+.migration-banner > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.migration-banner .icon-button {
+  margin-left: auto;
+}
+.transport-readout th {
+  white-space: nowrap;
+}

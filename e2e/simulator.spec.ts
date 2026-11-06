@@ -92,7 +92,7 @@ test("research library exposes all 19 candidates and edits only the selected for
     "Laureth-4",
   );
 });
-test("layer operations, HSP and free-volume controls persist and affect effective transport", async ({
+test("layer operations and polymer transition controls persist and affect transport", async ({
   page,
 }) => {
   await page.getByLabel("Polymer for layer 1").selectOption("HDPE");
@@ -102,12 +102,17 @@ test("layer operations, HSP and free-volume controls persist and affect effectiv
     .click();
   const layer = page.locator(".layer-card").first();
   await expect(
-    layer.getByRole("spinbutton", { name: "Free volume f₂₅" }),
-  ).toHaveValue("0.08");
-  await layer.getByRole("spinbutton", { name: "Free volume f₂₅" }).fill("0.16");
+    layer.getByRole("spinbutton", { name: /Glass transition Tg/ }),
+  ).toHaveValue("-110");
+  await expect(
+    layer.getByRole("spinbutton", { name: /Melting transition Tm/ }),
+  ).toHaveValue("133");
   await layer
-    .getByRole("spinbutton", { name: /Crystalline fraction/ })
-    .fill("0.2");
+    .getByRole("spinbutton", { name: /Glass transition Tg/ })
+    .fill("40");
+  await layer
+    .getByRole("spinbutton", { name: /Melting transition Tm/ })
+    .fill("100");
   await page
     .getByRole("button", { name: "Move layer 1 down", exact: true })
     .click();
@@ -122,7 +127,7 @@ test("layer operations, HSP and free-volume controls persist and affect effectiv
   await page.getByRole("button", { name: "Run both simulations" }).click();
   await expect(page.locator(".stale-banner")).toHaveCount(0);
   await expect(caseA(page).locator(".transport-readout")).toContainText(
-    "0.160",
+    "40 / 100",
   );
   await page.reload();
   await expect(page.getByLabel("Polymer for layer 2")).toHaveValue("HDPE");
@@ -184,18 +189,18 @@ test("invalid inputs disable both runs, corrected inputs recover, custom HSP and
   await page.getByRole("tab", { name: "HSP compatibility" }).click();
   await expect(page.locator(".hansen-svg")).toHaveCount(2);
   await page.getByRole("button", { name: "Model & research" }).click();
-  await expect(page.getByRole("dialog")).toContainText("Doolittle");
+  await expect(page.getByRole("dialog")).toContainText("Polymer transitions");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).not.toBeVisible();
 });
-test("v2 JSON and comparison CSV round trip; v1 imports remain supported", async ({
+test("v3 JSON and comparison CSV round trip; legacy imports remain supported", async ({
   page,
 }) => {
   await page.getByRole("button", { name: "Export", exact: true }).click();
   const j = page.waitForEvent("download");
   await page.getByRole("button", { name: /Project settings/ }).click();
   const project = JSON.parse(await readFile((await (await j).path())!, "utf8"));
-  expect(project.schemaVersion).toBe(2);
+  expect(project.schemaVersion).toBe(3);
   expect(project.configs).toHaveLength(2);
   await page.getByRole("button", { name: "Export", exact: true }).click();
   const d = page.waitForEvent("download");
@@ -217,24 +222,15 @@ test("v2 JSON and comparison CSV round trip; v1 imports remain supported", async
   ).toHaveValue("50");
   const old: any = defaultConfig();
   old.hours = 24;
-  delete old.transportModel;
-  delete old.freeVolumeB;
-  delete old.tortuosity;
+  old.transportModel = "arrhenius";
   for (const l of old.layers)
-    for (const k of [
-      "freeVolume25",
-      "tg",
-      "alphaGlassy",
-      "alphaRubbery",
-      "crystallinity",
-    ])
-      delete l[k];
+    for (const k of ["tm", "tg", "eaRubbery", "eaMelt"]) delete l[k];
   await page.getByLabel("Import AF project JSON").setInputFiles({
     name: "legacy.json",
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify({ schemaVersion: 1, config: old })),
   });
-  await expect(page.getByLabel("Transport model")).toHaveValue("arrhenius");
+  await expect(page.getByLabel("Transport model")).toHaveCount(0);
   await expect(page.getByRole("spinbutton", { name: /Duration/ })).toHaveValue(
     "24",
   );
@@ -302,4 +298,107 @@ test("mobile fits viewport and both visualizations remain available", async ({
     path: "/tmp/af-comparison-mobile.png",
     fullPage: true,
   });
+});
+
+test("crossing Tg and Tm changes the active regime without a free-volume editor", async ({
+  page,
+}) => {
+  await page.getByLabel("Polymer for layer 1").selectOption("EVA");
+  await page
+    .getByRole("button", { name: /HSP & transport/ })
+    .first()
+    .click();
+  const layer = page.locator(".layer-card").first();
+  await layer
+    .getByRole("spinbutton", { name: /Glass transition Tg/ })
+    .fill("40");
+  await layer
+    .getByRole("spinbutton", { name: /Melting transition Tm/ })
+    .fill("80");
+  await expect(
+    page.getByRole("spinbutton", { name: /Free volume/ }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Run both simulations" }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause animation", exact: true }),
+  ).toBeVisible();
+  await expect(
+    caseA(page).locator(".transport-readout tbody tr").first(),
+  ).toContainText("Glassy");
+  await caseA(page)
+    .getByRole("spinbutton", { name: /Temperature A/ })
+    .fill("60");
+  await page.getByRole("button", { name: "Run both simulations" }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause animation", exact: true }),
+  ).toBeVisible();
+  await expect(
+    caseA(page).locator(".transport-readout tbody tr").first(),
+  ).toContainText("Above Tg");
+  await caseA(page)
+    .getByRole("spinbutton", { name: /Temperature A/ })
+    .fill("85");
+  await page.getByRole("button", { name: "Run both simulations" }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause animation", exact: true }),
+  ).toBeVisible();
+  await expect(
+    caseA(page).locator(".transport-readout tbody tr").first(),
+  ).toContainText("Molten");
+  await expect(caseA(page).locator(".phase-note")).toContainText(
+    "geometry is held fixed",
+  );
+  await layer
+    .getByRole("checkbox", { name: "Has a melting transition" })
+    .uncheck();
+  await expect(
+    layer.getByRole("spinbutton", { name: /Melting transition Tm/ }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Run both simulations" }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause animation", exact: true }),
+  ).toBeVisible();
+  await expect(
+    caseA(page).locator(".transport-readout tbody tr").first(),
+  ).toContainText("Rubbery");
+  await expect(caseA(page).locator(".phase-note")).toHaveCount(0);
+});
+test("v2 free-volume pair imports show conversion and remove obsolete inputs", async ({
+  page,
+}) => {
+  const config: any = defaultConfig();
+  config.transportModel = "freeVolume";
+  config.freeVolumeB = 0.15;
+  config.tortuosity = 1.5;
+  for (const l of config.layers) {
+    l.freeVolume25 = 0.12;
+    l.crystallinity = 0.4;
+    l.alphaGlassy = 0.0001;
+    l.alphaRubbery = 0.0004;
+    delete l.eaRubbery;
+    delete l.eaMelt;
+    delete l.tm;
+  }
+  await page
+    .getByLabel("Import AF project JSON")
+    .setInputFiles({
+      name: "v2.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(
+        JSON.stringify({
+          schemaVersion: 2,
+          configs: [config, structuredClone(config)],
+          hue: 280,
+        }),
+      ),
+    });
+  await expect(page.getByRole("status")).toContainText("imported");
+  await expect(page.locator(".migration-banner")).toContainText("converted");
+  await expect(page.getByLabel("Transport model")).toHaveCount(0);
+  await page.getByRole("button", { name: "Dismiss conversion note" }).click();
+  await page.reload();
+  await expect(page.locator(".validation-strip")).toContainText(
+    "A mass residual:",
+  );
+  await expect(page.locator(".migration-banner")).toHaveCount(0);
 });

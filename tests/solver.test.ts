@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  fractionalFreeVolume,
+  migrationRegime,
   layerTransport,
   compatibility,
   diffusionAtTemperature,
@@ -30,7 +30,6 @@ function singleLayer(): Config {
       },
     ],
     beta: 0,
-    transportModel: "arrhenius",
     left: "sealed",
     right: "sealed",
     hours: 12,
@@ -226,48 +225,100 @@ test("researched library contains 19 traceable group estimates and a custom entr
   assert.ok(Math.abs(gms.hsp.p - Math.sqrt(740100) / 366.3) < 1e-10);
   assert.ok(Math.abs(gms.hsp.h - Math.sqrt(47000 / 366.3)) < 1e-10);
 });
-test("free volume is continuous at Tg and responds with the appropriate slope", () => {
+test("regimes distinguish glass, supported solid, melt and amorphous rubber", () => {
+  const l = { ...makeLayer("PET"), tg: 40, tm: 100 };
+  assert.equal(migrationRegime(l, 39), "Glassy");
+  assert.equal(migrationRegime(l, 40), "Above Tg");
+  assert.equal(migrationRegime(l, 99), "Above Tg");
+  assert.equal(migrationRegime(l, 100), "Molten");
+  assert.equal(migrationRegime({ ...l, tm: null }, 100), "Rubbery");
+});
+test("diffusion is continuous at both transitions with a calibrated D25 anchor", () => {
   const l = {
     ...makeLayer("Custom"),
     tg: 40,
-    freeVolume25: 0.1,
-    alphaGlassy: 0.0001,
-    alphaRubbery: 0.0005,
-  };
-  assert.ok(Math.abs(fractionalFreeVolume(l, 40) - 0.1015) < 1e-12);
-  assert.ok(Math.abs(fractionalFreeVolume(l, 50) - 0.1065) < 1e-12);
-  assert.ok(Math.abs(fractionalFreeVolume(l, 25) - 0.1) < 1e-12);
-});
-test("Doolittle reference, free-volume obstruction and crystallinity have physical limits", () => {
-  const c = defaultConfig();
-  c.temperature = 25;
-  c.transportModel = "freeVolume";
-  const l = {
-    ...makeLayer("Custom"),
-    freeVolume25: 0.1,
-    crystallinity: 0,
+    tm: 100,
+    ea: 70,
+    eaRubbery: 45,
+    eaMelt: 25,
     logD: -14,
   };
-  assert.equal(layerTransport(l, c).diffusion, 1e-14);
-  assert.ok(layerTransport({ ...l, freeVolume25: 0.08 }, c).diffusion < 1e-14);
-  assert.ok(layerTransport({ ...l, freeVolume25: 0.15 }, c).diffusion > 1e-14);
+  assert.equal(layerTransport(l, { temperature: 25 }).diffusion, 1e-14);
+  for (const t of [40, 100]) {
+    const left = layerTransport(l, { temperature: t - 1e-6 }).diffusion;
+    const right = layerTransport(l, { temperature: t + 1e-6 }).diffusion;
+    assert.ok(Math.abs(left / right - 1) < 1e-6);
+  }
+  for (const anchor of [
+    { tg: 10, tm: 20 },
+    { tg: 10, tm: 100 },
+    { tg: 40, tm: 100 },
+  ])
+    assert.equal(
+      layerTransport({ ...l, ...anchor }, { temperature: 25 }).diffusion,
+      1e-14,
+    );
+});
+test("crossing multiple regimes adds independent analytical Arrhenius increments", () => {
+  const l = {
+    ...makeLayer("PET"),
+    tg: 50,
+    tm: 100,
+    ea: 80,
+    eaRubbery: 40,
+    eaMelt: 20,
+    logD: -14,
+  };
+  const R = 8.314462618;
+  const step = (e: number, a: number, b: number) =>
+    ((-e * 1000) / R) * (1 / (b + 273.15) - 1 / (a + 273.15));
+  const expected =
+    1e-14 * Math.exp(step(80, 25, 50) + step(40, 50, 100) + step(20, 100, 150));
+  assert.ok(
+    Math.abs(layerTransport(l, { temperature: 150 }).diffusion / expected - 1) <
+      1e-12,
+  );
+  const inverse = { ...l, tg: 0, tm: 10 };
+  const coldExpected =
+    1e-14 * Math.exp(step(20, 25, 10) + step(40, 10, 0) + step(80, 0, -50));
   assert.ok(
     Math.abs(
-      layerTransport({ ...l, crystallinity: 0.5 }, c).diffusion / 1e-14 -
-        Math.pow(0.5, c.tortuosity),
+      layerTransport(inverse, { temperature: -50 }).diffusion / coldExpected -
+        1,
     ) < 1e-12,
   );
-  assert.equal(
-    layerTransport({ ...l, ea: 0 }, c).diffusion,
-    layerTransport({ ...l, ea: 150 }, c).diffusion,
-  );
-  c.transportModel = "arrhenius";
-  assert.equal(
-    layerTransport({ ...l, crystallinity: 0.9 }, c).diffusion,
-    1e-14,
-  );
 });
-test("warmer free-volume scenarios increase diffusion and sink extraction, conserving mass", () => {
+test("equal regime energies reproduce the original Arrhenius law in both temperature directions", () => {
+  const l = {
+    ...makeLayer("Custom"),
+    tg: 40,
+    tm: 100,
+    ea: 50,
+    eaRubbery: 50,
+    eaMelt: 50,
+  };
+  for (const temperature of [-100, 0, 25, 40, 80, 100, 150, 300])
+    assert.ok(
+      Math.abs(
+        layerTransport(l, { temperature }).diffusion /
+          diffusionAtTemperature(l.logD, 50, temperature) -
+          1,
+      ) < 1e-12,
+    );
+});
+test("each regime energy changes only its temperature segment", () => {
+  const l = { ...makeLayer("Custom"), tg: 50, tm: 100 };
+  assert.equal(
+    layerTransport({ ...l, eaMelt: 150 }, { temperature: 80 }).diffusion,
+    layerTransport(l, { temperature: 80 }).diffusion,
+  );
+  const hotter = layerTransport(
+    { ...l, eaMelt: 150 },
+    { temperature: 150 },
+  ).diffusion;
+  assert.ok(hotter > layerTransport(l, { temperature: 150 }).diffusion);
+});
+test("warmer scenarios increase diffusion and sink extraction while conserving mass", () => {
   const c = defaultConfig();
   c.left = "sink";
   c.right = "sink";
@@ -286,34 +337,88 @@ test("warmer free-volume scenarios increase diffusion and sink extraction, conse
   assert.ok(warm.frames.at(-1)!.filmMass < cold.frames.at(-1)!.filmMass);
   assert.ok(warm.maxError < 1e-9 && cold.maxError < 1e-9);
 });
-test("invalid free-volume extrapolation is rejected rather than clamped", () => {
+test("invalid transition order, absent Tm, energies and temperatures are validated", () => {
   const c = defaultConfig();
-  c.layers[0].freeVolume25 = 0.01;
-  c.layers[0].alphaRubbery = 0.002;
-  c.temperature = 0;
-  assert.ok(validateConfig(c).some((e) => e.includes("selected temperature")));
-  assert.throws(() => simulate(c), /selected temperature/);
+  c.layers[0].tg = 100;
+  c.layers[0].tm = 50;
+  assert.ok(validateConfig(c).some((e) => e.includes("Tm must be greater")));
+  c.layers[0].tm = null;
+  assert.deepEqual(validateConfig(c), []);
+  c.layers[0].eaMelt = -1;
+  assert.ok(validateConfig(c).length > 0);
+  c.layers[0].eaMelt = 30;
+  c.temperature = -274;
+  assert.ok(validateConfig(c).length > 0);
+  c.temperature = 301;
+  assert.ok(validateConfig(c).length > 0);
 });
-test("legacy projects preserve loading, HSP and Arrhenius semantics during migration", () => {
-  const original = defaultConfig();
-  const raw = structuredClone(original) as any;
-  delete raw.transportModel;
-  delete raw.freeVolumeB;
-  delete raw.tortuosity;
-  for (const l of raw.layers)
-    for (const key of [
-      "freeVolume25",
-      "tg",
-      "alphaGlassy",
-      "alphaRubbery",
-      "crystallinity",
-    ])
-      delete l[key];
-  const upgraded = migrateLegacyConfig(raw);
-  assert.equal(upgraded.transportModel, "arrhenius");
-  assert.equal(upgraded.layers[1].loading, original.layers[1].loading);
-  assert.deepEqual(upgraded.surfactant, original.surfactant);
-  assert.deepEqual(validateConfig(upgraded), []);
+test("old Arrhenius projects retain the exact original response after conversion", () => {
+  const raw: any = structuredClone(defaultConfig());
+  raw.transportModel = "arrhenius";
+  for (const l of raw.layers) {
+    delete l.tg;
+    delete l.tm;
+    delete l.eaRubbery;
+    delete l.eaMelt;
+  }
+  const converted = migrateLegacyConfig(raw);
+  assert.equal(converted.layers[1].loading, raw.layers[1].loading);
+  assert.deepEqual(converted.surfactant, raw.surfactant);
+  assert.deepEqual(validateConfig(converted), []);
+  assert.ok(!("transportModel" in converted));
+  for (const temperature of [0, 25, 80, 150])
+    assert.ok(
+      Math.abs(
+        layerTransport(converted.layers[0], { temperature }).diffusion /
+          diffusionAtTemperature(
+            raw.layers[0].logD,
+            raw.layers[0].ea,
+            temperature,
+          ) -
+          1,
+      ) < 1e-12,
+    );
+});
+test("v2 free-volume reference coefficients are converted to effective D25 and removed", () => {
+  const raw: any = structuredClone(defaultConfig());
+  raw.transportModel = "freeVolume";
+  raw.freeVolumeB = 0.15;
+  raw.tortuosity = 1.5;
+  for (const l of raw.layers) {
+    l.freeVolume25 = 0.12;
+    l.crystallinity = 0.4;
+    l.alphaGlassy = 0.0001;
+    l.alphaRubbery = 0.0004;
+    delete l.eaRubbery;
+    delete l.eaMelt;
+    delete l.tm;
+  }
+  const expected =
+    10 ** raw.layers[0].logD * Math.exp(-0.15 * (1 / 0.12 - 10)) * 0.6 ** 1.5;
+  const converted = migrateLegacyConfig(raw);
+  assert.ok(
+    Math.abs(
+      layerTransport(converted.layers[0], { temperature: 25 }).diffusion /
+        expected -
+        1,
+    ) < 1e-12,
+  );
+  assert.ok(
+    !("freeVolumeB" in converted) && !("freeVolume25" in converted.layers[0]),
+  );
+  assert.equal(converted.layers[0].tm, 110);
+  assert.deepEqual(validateConfig(converted), []);
+});
+test("diffusion-only runs conserve material below Tg, above Tg and above Tm", () => {
+  const c = defaultConfig();
+  c.layers = [
+    { ...makeLayer("Custom"), tg: 35, tm: 70, logD: -16, loading: 0.5 },
+  ];
+  for (const temperature of [20, 50, 90]) {
+    const r = simulate({ ...c, temperature }, { frames: 21, substeps: 20 });
+    assert.ok(r.maxError < 1e-8);
+    assert.ok(r.frames.every((f) => f.concentration.every((v) => v >= 0)));
+  }
 });
 
 test("malformed research metadata cannot enter the editor via project import", () => {

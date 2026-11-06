@@ -41,34 +41,48 @@ Jij = gij (ai − aj)
 ai = ci/Si
 ```
 
-In **Arrhenius mode**, temperature dependence uses an independent, supplied effective diffusion coefficient at 25°C:
+Temperature is represented by a **continuous, piecewise Arrhenius curve** anchored to effective D25 in the actual host. This replaces the former free-volume option. There is no extra crystalline obstruction applied to an effective reference coefficient.
+
+### 3.1 Polymer transition temperatures and regimes
+
+Each layer supplies Tg and optionally Tm (°C), plus three effective activation energies (kJ/mol):
+
+- T < Tg: **Glassy**, using `ea`.
+- Tg ≤ T < Tm: **Above Tg**, using `eaRubbery`. For semicrystalline resins this refers to increased mobility of the amorphous phase; it does not mean that the whole film is molten.
+- T ≥ Tm: **Molten**, using `eaMelt`.
+- If Tm is null, no melting transition is introduced; T ≥ Tg is labeled **Rubbery**, with `eaRubbery` throughout that upper range.
+
+Thresholds are taken literally for classification: a temperature exactly equal to Tg enters the upper regime; one equal to Tm enters the molten regime. Tm must be greater than Tg when present.
+
+### 3.2 Continuous Arrhenius integration
+
+For any interval within one regime:
 
 ```text
-D(T) = D25 exp[−Ea/R (1/T − 1/298.15)]
+ln[D(Tb)/D(Ta)] = −Ea,regime/R · (1/Tb − 1/Ta)
 R = 8.314462618 J/(mol K)
 ```
 
-The input activation energy is converted from kJ/mol to J/mol. The app does not infer diffusion from HSP, nor infer crystallinity or morphology from density. Arrhenius extrapolation across phase or morphology transitions is not justified by this model.
+All temperatures in this equation are kelvin and energies are converted from kJ/mol to J/mol. To evaluate the selected temperature, subdivide the path from 25°C at any intervening Tg or Tm, add the logarithmic increments, and multiply D25 by the exponential of the sum. For cooling, integrate the same segments in reverse. Using the anchor correctly matters when 25°C is already above Tg, or even above a user-defined Tm.
 
-### 3.1 Alternative theoretical free-volume mode
+D(T) is continuous at Tg and Tm; its Arrhenius slope changes according to the chosen energies. Setting all energies equal exactly reproduces the previous single Arrhenius relationship. There is no universal jump factor at melting. A discontinuous measured change would require its own calibrated model; transition temperatures alone do not determine diffusion constants.
 
-This phenomenological extension follows the general inverse-free-volume dependence motivated by Doolittle. The uploaded book discusses **viscosity** in Eq. 15.33, printed p. 537 (PDF p. 564), and explicitly discusses limitations of universal WLF constants. Its extension here to additive diffusivity, resin presets, B and the morphology factor is a modeling assumption requiring calibration; these are not tabulated surfactant diffusion predictions from that equation.
+The initial resin scenarios are:
 
-Each layer supplies amorphous fractional free volume f25, glass transition Tg, glassy/rubbery fractional expansion slopes αg/αr and crystalline volume fraction Xc:
+| Resin  | Tg °C | Tm °C | Ea below Tg | Ea above Tg | Ea above Tm |
+| ------ | ----: | ----: | ----------: | ----------: | ----------: |
+| LDPE   |  −110 |   110 |          60 |          45 |          30 |
+| LLDPE  |  −110 |   122 |          60 |          45 |          30 |
+| HDPE   |  −110 |   133 |          65 |          50 |          30 |
+| PP     |   −10 |   165 |          65 |          50 |          30 |
+| EVA    |   −25 |    90 |          55 |          40 |          25 |
+| PET    |    75 |   255 |          60 |          50 |          30 |
+| PA6    |    50 |   220 |          55 |          45 |          30 |
+| Custom |    20 |  none |          60 |          45 |      unused |
 
-```text
-f(T) = f25 + αg[min(T,Tg) − min(25,Tg)]
-           + αr[max(T,Tg) − max(25,Tg)]
-D(T) = Dbase · exp[−B(1/f(T) − 1/0.10)] · (1−Xc)^τ
-```
+Energies are in kJ/mol. Transition temperatures are approximate family-level starting values and activation energies are illustrative calibration parameters, **not measured grade-specific values or a universal ordering of diffusion barriers**. Density, HSP and estimated surfactant volume do not supply these activation energies. The original logD values remain illustrative effective reference coefficients.
 
-Celsius differences equal kelvin differences; α is in K⁻¹. f(T) is continuous at Tg. It is the assumed amorphous fractional free-volume proxy, **not** the total void fraction, the unoccupied van der Waals volume or 1−Xc. Density is used for loading conversion and does not independently predict f in this version. Xc is interpreted as a volume fraction; the morphology factor lumps unavailable crystalline volume and tortuosity rather than resolving crystals spatially. It is not an additional stored mass pool: all initialized surfactant is mobile, expressed per bulk film volume. No automatic concentration cap or phase equilibrium is introduced.
-
-Dbase is a reference diffusivity at 25°C in a fully amorphous hypothetical host with f=0.10. It is **not** the effective D25 of the selected resin unless f25=0.10 and Xc=0. This distinction is displayed in the editor. B is dimensionless and is a pair-specific calibratable free-volume sensitivity (default 0.15); τ is a morphology exponent (default 1.5). Zero B disables the free-volume term, and zero τ disables the obstruction term. More available free volume increases D; greater Xc reduces D for τ>0. The free-volume mode does not multiply in the Arrhenius term, and Arrhenius mode does not multiply in Xc again.
-
-Resin scenarios (f25 / Tg °C / Xc) are LDPE 0.12/−110/0.40, LLDPE 0.11/−110/0.45, HDPE 0.08/−110/0.70, PP 0.10/−10/0.50, EVA 0.14/−25/0.20, PET 0.045/75/0.30, PA6 0.06/50/0.35 and Custom 0.10/20/0. The common illustrative slopes are αg=0.0001 and αr=0.0004 K⁻¹. **These numerical scenarios were chosen for exploration, not derived or verified resin-grade measurements from the supplied PDF.** Changing a grade should prompt calibration of f, Xc, slopes, Dbase and B; do not claim a physical prediction simply because a named preset exists.
-
-The selected temperature remains within 0–80°C. f(T) outside 0.005–0.50 is rejected instead of clipped. Xc, Tg and other material coefficients remain constant during a run: melting, recrystallization, structural aging and humidity plasticization are not simulated. The HVK triplets remain at their ambient reference value, and surface rate constants are held constant with temperature. No diffusion size factor is inferred from the estimated surfactant molar volume.
+Selected temperatures from −150 to 300°C are supported to explore the listed transitions; this is not a validation of material stability over that entire interval. The calculation is isothermal, with no thermal ramp, latent heat, melting fraction, recrystallization, humidity plasticization, degradation or variable geometry. At/above Tm it is only a diffusion estimate for a hypothetical fixed-geometry molten layer; the interface displays that limitation. HSP and surface kinetics remain at their reference values. Equal final concentration profiles at different temperatures may reflect the same equilibrium reached at different rates.
 
 ## 4. Boundary and surface inventories
 
@@ -146,4 +160,15 @@ Both cases have independent configurations and initial inventories, but a common
 
 Concentration axes and HSP projection bounds are shared across the pair. Surface-history inventory axes use the larger surface capacity, so two different capacities do not silently generate different plot scales. Face bars show each face's own Γ/Γmax; numeric inventories permit absolute comparison. The difference summary uses B−A, never an efficacy claim. Regions of strong partition preference may produce similar final profiles at different temperatures even when transient rates differ; equilibrium similarity should not be mistaken for a broken temperature dependence.
 
-Version-2 project files store `configs: [A,B]` and a shared `hue`. Explicit version-1 imports and older saved settings retain their old diffusion/Arrhenius semantics and original HSP. Only newly added fields receive defaults. Unknown versions, invalid configurations and unequal comparison durations are rejected. The research audit JSON is deliberately separate from the application project schema.
+Version-3 project files store `configs: [A,B]` and a shared `hue`. They are validated without filling missing current-model fields. Explicit v1 imports and older saved Arrhenius projects are upgraded with their original activation energy in every regime, retaining the original curve; new Tg/Tm defaults only classify those regimes until their energies are edited.
+
+Former v2 free-volume projects are converted by evaluating their original coefficient at 25°C:
+
+```text
+log10(D25,new) = log10(Dbase,old)
+ + [−B(1/f25 − 10) + τ ln(1−Xc)]/ln(10)
+```
+
+This conversion is used **only to recover the old effective reference value**. No free-volume law remains in new simulation runs. Tg is retained, Tm and regime energies use the resin transition defaults, and a visible conversion note states that the off-reference temperature response has changed and must be reviewed. Removed legacy fields are stripped from the exported current configuration. Incomplete legacy coefficients are rejected instead of silently converted. The old v2 storage key is preserved; valid converted settings are saved under the new v3 key.
+
+Unknown project versions, invalid configurations and unequal comparison durations are rejected. The research audit JSON remains separate from the application project schema.
