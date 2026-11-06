@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 3,
+  "configs": [
+    {
+      "layers": [
+        {
+          "name": "PET proxy for PETG sealant",
+          "density": 1380,
+          "hsp": {
+            "d": 18.2,
+            "p": 6.4,
+            "h": 6.6
+          },
+          "radius": 6,
+          "logD": -16,
+          "ea": 60,
+          "eaRubbery": 50,
+          "eaMelt": 30,
+          "tg": 78,
+          "tm": null,
+          "id": "sealant",
+          "polymer": "PET",
+          "thickness": 2,
+          "loading": 0
+        },
+        {
+          "name": "EVA proxy for EMA + masterbatch",
+          "density": 940,
+          "hsp": {
+            "d": 16.8,
+            "p": 3,
+            "h": 5.5
+          },
+          "radius": 7,
+          "logD": -13.7,
+          "ea": 55,
+          "eaRubbery": 40,
+          "eaMelt": 25,
+          "tg": -25,
+          "tm": 90,
+          "id": "reservoir",
+          "polymer": "EVA",
+          "thickness": 3,
+          "loading": 3
+        },
+        {
+          "name": "PET proxy for polyester backing",
+          "density": 1380,
+          "hsp": {
+            "d": 18.2,
+            "p": 6.4,
+            "h": 6.6
+          },
+          "radius": 6,
+          "logD": -16,
+          "ea": 60,
+          "eaRubbery": 50,
+          "eaMelt": 30,
+          "tg": 78,
+          "tm": 245,
+          "id": "backing",
+          "polymer": "PET",
+          "thickness": 12,
+          "loading": 0
+        }
+      ],
+      "surfactant": {
+        "id": "hvk-3",
+        "name": "Glyceryl monostearate",
+        "commonName": "GMS / monostearin",
+        "hsp": {
+          "d": 16.844116844116844,
+          "p": 2.3485958191649594,
+          "h": 11.32740607156503
+        },
+        "molarVolume": 366.3,
+        "formula": "C21H42O4",
+        "assumptions": "Pure primary (1-)monoester; two remaining OH on adjacent carbons. Commercial mono-/diglyceride mixtures are not this molecule.",
+        "source": "HVK/Fedors group estimate · 2009, Tables 7.3 & 7.10"
+      },
+      "beta": 1,
+      "temperature": 3,
+      "hours": 720,
+      "left": "wash",
+      "right": "dry",
+      "surfaceCapacity": 2,
+      "logAdsorption": -11,
+      "desorption": 0.02,
+      "washRate": 0.15
+    },
+    {
+      "layers": [
+        {
+          "name": "PET proxy for PETG sealant",
+          "density": 1380,
+          "hsp": {
+            "d": 18.2,
+            "p": 6.4,
+            "h": 6.6
+          },
+          "radius": 6,
+          "logD": -16,
+          "ea": 60,
+          "eaRubbery": 50,
+          "eaMelt": 30,
+          "tg": 78,
+          "tm": null,
+          "id": "sealant",
+          "polymer": "PET",
+          "thickness": 2,
+          "loading": 0
+        },
+        {
+          "name": "EVA proxy for EMA + masterbatch",
+          "density": 940,
+          "hsp": {
+            "d": 16.8,
+            "p": 3,
+            "h": 5.5
+          },
+          "radius": 7,
+          "logD": -13.7,
+          "ea": 55,
+          "eaRubbery": 40,
+          "eaMelt": 25,
+          "tg": -25,
+          "tm": 90,
+          "id": "reservoir",
+          "polymer": "EVA",
+          "thickness": 3,
+          "loading": 3
+        },
+        {
+          "name": "PET proxy for polyester backing",
+          "density": 1380,
+          "hsp": {
+            "d": 18.2,
+            "p": 6.4,
+            "h": 6.6
+          },
+          "radius": 6,
+          "logD": -16,
+          "ea": 60,
+          "eaRubbery": 50,
+          "eaMelt": 30,
+          "tg": 78,
+          "tm": 245,
+          "id": "backing",
+          "polymer": "PET",
+          "thickness": 12,
+          "loading": 0
+        }
+      ],
+      "surfactant": {
+        "id": "hvk-3",
+        "name": "Glyceryl monostearate",
+        "commonName": "GMS / monostearin",
+        "hsp": {
+          "d": 16.844116844116844,
+          "p": 2.3485958191649594,
+          "h": 11.32740607156503
+        },
+        "molarVolume": 366.3,
+        "formula": "C21H42O4",
+        "assumptions": "Pure primary (1-)monoester; two remaining OH on adjacent carbons. Commercial mono-/diglyceride mixtures are not this molecule.",
+        "source": "HVK/Fedors group estimate · 2009, Tables 7.3 & 7.10"
+      },
+      "beta": 1,
+      "temperature": 25,
+      "hours": 720,
+      "left": "wash",
+      "right": "dry",
+      "surfaceCapacity": 2,
+      "logAdsorption": -11,
+      "desorption": 0.02,
+      "washRate": 0.15
+    }
+  ],
+  "hue": 280,
+  "migrationNotice": "EP3666520A1 example 1 approximation: 2/3/12 µm PET/EVA/PET; 3 wt% active AF in core only. EVA substitutes for the EMA/masterbatch blend; GMS represents an unidentified fatty-acid-ester AF. A: 3°C; B: 25°C. Continuous wash on Face A is an assumed depletion scenario, not the patent condensation test. Material transport parameters are uncalibrated."
+}
