@@ -19,6 +19,8 @@ npm run build
 npm run preview
 ```
 
+On Windows, the development server uses polling for file changes so it can work on mapped or network drives. If a drive still does not support watching, copy the project to a local folder such as `C:\Projects\AF-Migration-Lab` and run `npm ci` followed by `npm run dev` there.
+
 No backend, API keys, external fonts or online services are needed to run the installed app. The simulation runs in a web worker. Dependencies are installed from the npm registry using the lockfile. Each cloud task is already isolated; use the existing checkout without creating a Git worktree unless explicitly requested.
 
 ## Use the simulator
